@@ -53,6 +53,17 @@ export function getDatabasePool(env = process.env) {
     ssl,
   });
 
+  // `timezone: 'Z'` controls mysql2's JavaScript date conversion. This SQL
+  // setting controls MySQL's CURRENT_TIMESTAMP/NOW() for every acquisition.
+  // mysql2 queues this before resolving getConnection(), including for pooled
+  // connections that are being reused. If setup fails, discard that session
+  // rather than let an application query run with an unknown timezone.
+  pool.on('acquire', (connection) => {
+    connection.query("SET SESSION time_zone = '+00:00'", (error) => {
+      if (error) connection.destroy();
+    });
+  });
+
   return pool;
 }
 

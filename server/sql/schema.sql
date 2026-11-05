@@ -4,7 +4,8 @@ CREATE DATABASE IF NOT EXISTS feedback_collector
 
 USE feedback_collector;
 
--- All application timestamps are interpreted and written as UTC.
+-- CURRENT_TIMESTAMP follows the SQL session timezone. The application pool
+-- sets each acquired session to +00:00 before application queries run.
 CREATE TABLE IF NOT EXISTS feedback (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   name VARCHAR(100) NOT NULL,
