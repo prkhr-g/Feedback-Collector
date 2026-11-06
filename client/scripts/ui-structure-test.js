@@ -6,8 +6,10 @@ const widget = await readFile(new URL('../src/components/TurnstileWidget.jsx', i
 const adminApp = await readFile(new URL('../src/components/admin/AdminApp.jsx', import.meta.url), 'utf8');
 const adminDashboard = await readFile(new URL('../src/components/admin/AdminDashboard.jsx', import.meta.url), 'utf8');
 const adminApi = await readFile(new URL('../src/services/adminApi.js', import.meta.url), 'utf8');
+const indexHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
 const adminCss = await readFile(new URL('../src/components/admin/admin.css', import.meta.url), 'utf8');
+const securityHeaders = await readFile(new URL('../../server/src/middleware/securityHeaders.js', import.meta.url), 'utf8');
 
 assert.match(app, /<main\b/u);
 assert.match(app, /<h1 id="page-title"/u);
@@ -19,6 +21,10 @@ assert.match(app, /RATING_OPTIONS\.map/u);
 assert.match(app, /type="radio"/u);
 assert.match(app, /aria-required="true"/u);
 assert.match(widget, /role="group"\s+aria-labelledby="captcha-label"/u);
+assert.match(indexHtml, /fonts\.googleapis\.com\/css2\?family=Poppins:wght@400;500;600;700/u);
+assert.match(app, /Penthara Technologies/u);
+assert.match(adminApp, /PENTHARA TECHNOLOGIES/u);
+assert.match(adminDashboard, /Penthara Technologies/u);
 assert.doesNotMatch(app, /Use a prompt|usePrompt|getSuggestedPrompt/u);
 assert.match(app, /onFocus=\{\(\) => \{/u);
 assert.match(app, /setSuggestionsOpen\(true\)/u);
@@ -79,3 +85,14 @@ assert.match(adminCss, /@media\s*\(max-width:\s*420px\)/u);
 assert.match(adminCss, /:focus-visible/u);
 assert.match(adminCss, /prefers-reduced-motion:\s*reduce/u);
 console.log('PASS: public/admin responsive breakpoints, keyboard focus styles, and reduced-motion support exist');
+
+for (const token of ['--brand-purple: #5426A8', '--brand-magenta: #C52B91', '--brand-background: #F7F5FA', '--brand-text: #21172D', '--brand-muted: #777184', "--font-ui: 'Poppins'"]) {
+  assert.ok(css.includes(token), `shared visual token exists: ${token}`);
+}
+assert.match(css, /font-size:\s*clamp\(44px, 4\.1vw, 54px\)/u);
+assert.match(adminCss, /\.stat-value\s*\{[^}]*font-size:\s*30px/u);
+assert.match(adminCss, /\.admin-field label\s*\{[^}]*font-size:\s*13px/u);
+assert.match(securityHeaders, /style-src 'self' https:\/\/fonts\.googleapis\.com/u);
+assert.match(securityHeaders, /style-src-attr 'unsafe-inline'/u);
+assert.match(securityHeaders, /font-src 'self' https:\/\/fonts\.gstatic\.com/u);
+console.log('PASS: Penthara palette/Poppins tokens, brand labels, larger public/admin type, and font CSP sources are configured');

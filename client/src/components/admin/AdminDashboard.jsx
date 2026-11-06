@@ -316,9 +316,9 @@ export default function AdminDashboard({ admin, onSessionExpired }) {
   return (
     <div className="admin-shell">
       <header className="admin-header">
-        <a className="admin-brand" href="/admin" aria-label="Feedback Collector dashboard">
+        <a className="admin-brand" href="/admin" aria-label="Penthara Technologies feedback dashboard">
           <span className="admin-brand-mark" aria-hidden="true"><i /><i /><i /><i /></span>
-          <span>Feedback <b>Collector</b><small>ADMIN</small></span>
+          <span className="admin-brand-lockup"><strong>Penthara Technologies</strong><small>FEEDBACK ADMIN</small></span>
         </a>
         <div className="admin-header-actions">
           <a className="admin-public-link" href="/">View public form <span aria-hidden="true">↗</span></a>
@@ -406,7 +406,7 @@ export default function AdminDashboard({ admin, onSessionExpired }) {
           )}
         </section>
 
-        <footer className="admin-footer"><span>Feedback Collector</span><span>Dashboard dates and chart ranges use UTC.</span></footer>
+        <footer className="admin-footer"><span>Penthara Technologies · Feedback Portal</span><span>Dashboard dates and chart ranges use UTC.</span></footer>
       </main>
 
       <DeleteDialog item={deleteTarget} busy={deleteBusy} error={deleteError} onCancel={() => setDeleteTarget(null)} onConfirm={deleteFeedback} />

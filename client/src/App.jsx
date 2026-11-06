@@ -195,9 +195,9 @@ function PublicFeedbackPage() {
   return (
     <div className="page-shell">
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="Feedback Collector home">
+        <a className="brand" href="#top" aria-label="Penthara Technologies feedback portal home">
           <span className="brand-mark" aria-hidden="true"><i /><i /><i /><i /></span>
-          <span>Feedback <span className="brand-muted">Collector</span></span>
+          <span className="brand-lockup"><strong>Penthara Technologies</strong><small>FEEDBACK PORTAL</small></span>
         </a>
         <span className="header-note"><span className="header-dot" /> Open feedback</span>
       </header>
@@ -207,8 +207,8 @@ function PublicFeedbackPage() {
           <p className="eyebrow"><span className="eyebrow-line" /> YOUR VOICE, IN THE LOOP</p>
           <h1 id="page-title">Help us make the next visit <span>better.</span></h1>
           <p className="intro-copy">
-            A useful product is built by listening. Tell us what worked, what didn’t,
-            or what you would like to see next.
+            Tell us about your experience with Penthara Technologies. Share what
+            worked, what could improve, or what you would like to see next.
           </p>
 
           <div className="process-card">
@@ -445,7 +445,7 @@ function PublicFeedbackPage() {
       </main>
 
       <footer className="site-footer">
-        <span>Feedback Collector</span>
+        <span>Penthara Technologies · Feedback Portal</span>
         <span>Thoughtful feedback makes a difference.</span>
         <a href="/admin">Administrator sign in</a>
       </footer>

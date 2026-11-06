@@ -33,7 +33,7 @@ function LoginPage({ onAuthenticated, notice = '' }) {
         <div className="login-lock-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none"><rect x="4.5" y="10" width="15" height="11" rx="2.5" stroke="currentColor" strokeWidth="1.6" /><path d="M8 10V7a4 4 0 1 1 8 0v3m-4 4v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
         </div>
-        <p className="admin-eyebrow">FEEDBACK COLLECTOR</p>
+        <p className="admin-eyebrow">PENTHARA TECHNOLOGIES · FEEDBACK PORTAL</p>
         <h1 id="admin-login-title">Welcome back</h1>
         <p className="login-description">Sign in to review feedback and dashboard activity.</p>
         {(error || notice) && <p className="admin-alert" role="alert">{error || notice}</p>}
