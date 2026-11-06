@@ -12,9 +12,10 @@ the production server can serve the client and API from one origin to support
 HTTP-only cookie authentication.
 
 The public React form uses native form controls and local validation instead
-of an additional form library. Feedback suggestions are deterministic starters
-based on the selected type and rating; they never replace edited text unless
-the user chooses to use the suggestion.
+of an additional form library. Feedback suggestions are predefined statements
+grouped by selected type and rating, filtered locally against the message text,
+and inserted only when the visitor selects one. The inserted statement stays
+editable; custom feedback never requires a suggestion.
 
 The admin React views call the existing same-origin APIs directly with the
 browser's HttpOnly session cookie. JWTs stay out of JavaScript storage.

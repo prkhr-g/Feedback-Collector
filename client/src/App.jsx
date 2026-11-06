@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TurnstileWidget from './components/TurnstileWidget.jsx';
 import AdminApp from './components/admin/AdminApp.jsx';
 import {
   FEEDBACK_TYPES,
-  getSuggestedPrompt,
+  getFeedbackSuggestions,
+  getSuggestionKeyAction,
   RATING_OPTIONS,
   validateFeedbackForm,
 } from './utils/feedbackForm.js';
@@ -53,16 +54,32 @@ function PublicFeedbackPage() {
   const [notice, setNotice] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [captchaCycle, setCaptchaCycle] = useState(0);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
+  const suppressSuggestionFocusRef = useRef(false);
+  const messageFieldRef = useRef(null);
   const messageRef = useRef(null);
   const nameRef = useRef(null);
   const emailRef = useRef(null);
   const typeRef = useRef(null);
   const ratingRef = useRef(null);
   const errorSummaryRef = useRef(null);
-  const prompt = useMemo(
-    () => getSuggestedPrompt(form.feedbackType, form.rating),
-    [form.feedbackType, form.rating],
+  const suggestions = useMemo(
+    () => getFeedbackSuggestions(form.feedbackType, form.rating, form.message),
+    [form.feedbackType, form.rating, form.message],
   );
+
+  useEffect(() => {
+    if (!suggestionsOpen) return undefined;
+    function closeOnOutsidePointer(event) {
+      if (!messageFieldRef.current?.contains(event.target)) {
+        setSuggestionsOpen(false);
+        setActiveSuggestionIndex(-1);
+      }
+    }
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePointer);
+  }, [suggestionsOpen]);
 
   const handleTurnstileToken = useCallback((token) => {
     setTurnstileToken(token);
@@ -72,6 +89,9 @@ function PublicFeedbackPage() {
   function updateField(event) {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: name === 'rating' ? Number(value) : value }));
+    if (name === 'message' || name === 'feedbackType' || name === 'rating') {
+      setActiveSuggestionIndex(-1);
+    }
     setFieldErrors((current) => ({ ...current, [name]: undefined }));
     setNotice(null);
   }
@@ -81,14 +101,35 @@ function PublicFeedbackPage() {
     setFieldErrors((current) => ({ ...current, rating: undefined }));
   }
 
-  function usePrompt() {
-    setForm((current) => ({ ...current, message: prompt }));
+  function chooseSuggestion(suggestion) {
+    setForm((current) => ({ ...current, message: suggestion }));
     setFieldErrors((current) => ({ ...current, message: undefined }));
+    setSuggestionsOpen(false);
+    setActiveSuggestionIndex(-1);
     messageRef.current?.focus();
+  }
+
+  function handleMessageKeyDown(event) {
+    const action = getSuggestionKeyAction(event.key, activeSuggestionIndex, suggestions.length);
+    if (!action) return;
+    if (action.type === 'close') {
+      event.preventDefault();
+      setSuggestionsOpen(false);
+      setActiveSuggestionIndex(-1);
+    } else if (action.type === 'move') {
+      event.preventDefault();
+      setSuggestionsOpen(true);
+      setActiveSuggestionIndex(action.index);
+    } else if (action.type === 'select') {
+      event.preventDefault();
+      chooseSuggestion(suggestions[action.index]);
+    }
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
+    setSuggestionsOpen(false);
+    setActiveSuggestionIndex(-1);
     if (isSubmitting) return;
 
     const errors = validateFeedbackForm(form, turnstileToken);
@@ -99,8 +140,10 @@ function PublicFeedbackPage() {
         errorSummaryRef.current?.focus();
         const firstInvalid = ['name', 'email', 'feedbackType', 'rating', 'message', 'turnstileToken']
           .find((field) => errors[field]);
-        ({ name: nameRef, email: emailRef, feedbackType: typeRef, rating: ratingRef, message: messageRef }[firstInvalid])
-          ?.current?.focus();
+        const firstInvalidRef = ({ name: nameRef, email: emailRef, feedbackType: typeRef, rating: ratingRef, message: messageRef }[firstInvalid]);
+        if (firstInvalid === 'message') suppressSuggestionFocusRef.current = true;
+        firstInvalidRef?.current?.focus();
+        suppressSuggestionFocusRef.current = false;
       });
       return;
     }
@@ -313,13 +356,10 @@ function PublicFeedbackPage() {
                 <FieldError id="rating-error">{fieldErrors.rating}</FieldError>
               </fieldset>
 
-              <div className="field-group message-field">
+              <div className="field-group message-field" ref={messageFieldRef}>
                 <div className="message-label-row">
                   <label htmlFor="message">Your message <span>*</span></label>
-                  <button className="suggestion-button" type="button" onClick={usePrompt}>
-                    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5v3M10 14.5v3M2.5 10h3m9 0h3m-11.7-5.2 2.1 2.1m6.2 6.2 2.1 2.1m0-10.4-2.1 2.1m-6.2 6.2-2.1 2.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
-                    Use a prompt
-                  </button>
+                  <span className="suggestion-label">Optional suggestions</span>
                 </div>
                 <textarea
                   ref={messageRef}
@@ -328,15 +368,52 @@ function PublicFeedbackPage() {
                   rows="4"
                   value={form.message}
                   onChange={updateField}
+                  onFocus={() => {
+                    if (suppressSuggestionFocusRef.current) return;
+                    setSuggestionsOpen(true);
+                    setActiveSuggestionIndex(-1);
+                  }}
+                  onClick={() => setSuggestionsOpen(true)}
+                  onKeyDown={handleMessageKeyDown}
                   placeholder="Tell us a little more about your experience..."
                   maxLength={2000}
                   required
                   aria-required="true"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={suggestionsOpen}
+                  aria-controls={suggestionsOpen ? 'message-suggestions' : undefined}
+                  aria-activedescendant={suggestionsOpen && activeSuggestionIndex >= 0 ? `message-suggestion-${activeSuggestionIndex}` : undefined}
                   aria-invalid={Boolean(fieldErrors.message)}
                   aria-describedby={fieldErrors.message ? 'message-hint message-error' : 'message-hint'}
                 />
+                {suggestionsOpen && (
+                  <div className="suggestion-panel">
+                    <div className="suggestion-panel-heading">
+                      <span>Suggestions</span>
+                      <span>{form.feedbackType} · {form.rating ? RATING_OPTIONS.find(({ value }) => value === form.rating)?.label : 'all ratings'}</span>
+                    </div>
+                    <ul id="message-suggestions" className="suggestion-list" role="listbox" aria-label="Prewritten feedback suggestions">
+                      {suggestions.length > 0 ? suggestions.map((suggestion, index) => (
+                          <li
+                            id={`message-suggestion-${index}`}
+                            className={`suggestion-option ${activeSuggestionIndex === index ? 'suggestion-option-active' : ''}`}
+                            key={suggestion}
+                            role="option"
+                            aria-selected={activeSuggestionIndex === index}
+                            onPointerDown={(event) => event.preventDefault()}
+                            onClick={() => chooseSuggestion(suggestion)}
+                          >
+                            {suggestion}
+                          </li>
+                        )) : (
+                          <li className="suggestion-empty" role="option" aria-disabled="true">No matching suggestions. You can keep writing your own feedback.</li>
+                        )}
+                    </ul>
+                  </div>
+                )}
                 <div className="message-footer">
-                  <span id="message-hint" className="field-hint">Your message is editable before you send it.</span>
+                  <span id="message-hint" className="field-hint">Suggestions are optional; your message stays editable.</span>
                   <span className="character-count" aria-live="polite">{Array.from(form.message).length}/1,000</span>
                 </div>
                 <FieldError id="message-error">{fieldErrors.message}</FieldError>

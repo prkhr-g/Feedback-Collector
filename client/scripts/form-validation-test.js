@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {
   FEEDBACK_TYPES,
-  getSuggestedPrompt,
+  getFeedbackSuggestions,
+  getSuggestionKeyAction,
   RATING_OPTIONS,
   validateFeedbackForm,
 } from '../src/utils/feedbackForm.js';
@@ -28,9 +29,34 @@ assert.ok(validateFeedbackForm({ ...validForm, name: 'Ada\nLovelace' }, 'token')
 assert.ok(validateFeedbackForm({ ...validForm, message: 'hello\u0000world' }, 'token').message);
 console.log('PASS: required fields, lengths, allowlists, rating bounds, and control characters match API rules');
 
-assert.equal(getSuggestedPrompt('Bug report', 1), 'What went wrong, and what did you expect to happen?');
-assert.equal(getSuggestedPrompt('Bug report', 5), 'What would you like us to know?');
-assert.equal(getSuggestedPrompt('Feature request', 3), 'What would you like to be able to do?');
-assert.equal(getSuggestedPrompt('Appreciation', 5), 'What worked particularly well for you?');
-assert.equal(getSuggestedPrompt('General feedback', 0), 'What could we improve?');
-console.log('PASS: starter prompts are deterministic for selected feedback type and rating');
+for (const type of FEEDBACK_TYPES) {
+  for (const { value: rating } of RATING_OPTIONS) {
+    const suggestions = getFeedbackSuggestions(type, rating);
+    assert.equal(suggestions.length, 2, `${type} · rating ${rating} has two suggestions`);
+    assert.ok(suggestions.every((suggestion) => suggestion.trim().length > 20));
+    assert.ok(suggestions.every((suggestion) => !suggestion.includes('?')), `${type} · rating ${rating} contains statements, not questions`);
+  }
+}
+assert.ok(getFeedbackSuggestions('General feedback', 5).includes('The overall experience was excellent.'));
+assert.ok(getFeedbackSuggestions('General feedback', 3).includes('The experience was satisfactory, but there is room for improvement.'));
+assert.ok(getFeedbackSuggestions('Bug report', 1).includes('The application frequently crashes while performing basic tasks.'));
+assert.ok(getFeedbackSuggestions('Bug report', 2).includes('Several features are not working as expected.'));
+assert.ok(getFeedbackSuggestions('Feature request', 5).includes('I would love to see more features added in future updates.'));
+assert.ok(getFeedbackSuggestions('Complaint', 1).includes('I am disappointed with the service and the way my issue was handled.'));
+assert.ok(getFeedbackSuggestions('Appreciation', 5).includes("The service was excellent, and I really appreciate the team's efforts."));
+assert.equal(getFeedbackSuggestions('Unknown', 3).length, 0);
+console.log('PASS: all 30 feedback type/rating combinations have context-specific statement suggestions, including the requested examples');
+
+assert.ok(getFeedbackSuggestions('General feedback', 5, 'EXCELLENT').every((suggestion) => suggestion.toLowerCase().includes('excellent')));
+assert.equal(getFeedbackSuggestions('Bug report', 1, 'nothing matches this custom text').length, 0);
+assert.equal(getFeedbackSuggestions('Complaint', 0).length, 10, 'no selected rating shows suggestions across ratings for the selected type');
+console.log('PASS: suggestion filtering is case-insensitive, custom input can have no matches, and empty input returns relevant defaults');
+
+assert.deepEqual(getSuggestionKeyAction('ArrowDown', -1, 3), { type: 'move', index: 0 });
+assert.deepEqual(getSuggestionKeyAction('ArrowDown', 2, 3), { type: 'move', index: 0 });
+assert.deepEqual(getSuggestionKeyAction('ArrowUp', -1, 3), { type: 'move', index: 2 });
+assert.deepEqual(getSuggestionKeyAction('ArrowUp', 0, 3), { type: 'move', index: 2 });
+assert.deepEqual(getSuggestionKeyAction('Enter', 1, 3), { type: 'select', index: 1 });
+assert.equal(getSuggestionKeyAction('Enter', -1, 3), null, 'Enter without a highlighted option remains available for multiline text');
+assert.deepEqual(getSuggestionKeyAction('Escape', -1, 0), { type: 'close' });
+console.log('PASS: Arrow Up/Down wrap through options, Enter selects only a highlighted option, and Escape closes');

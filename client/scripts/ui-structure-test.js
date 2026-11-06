@@ -19,9 +19,21 @@ assert.match(app, /RATING_OPTIONS\.map/u);
 assert.match(app, /type="radio"/u);
 assert.match(app, /aria-required="true"/u);
 assert.match(widget, /role="group"\s+aria-labelledby="captcha-label"/u);
-assert.match(app, /type="button" onClick=\{usePrompt\}/u);
+assert.doesNotMatch(app, /Use a prompt|usePrompt|getSuggestedPrompt/u);
+assert.match(app, /onFocus=\{\(\) => \{/u);
+assert.match(app, /setSuggestionsOpen\(true\)/u);
+assert.match(app, /aria-autocomplete="list"/u);
+assert.match(app, /role="listbox"/u);
+assert.match(app, /role="option"/u);
+assert.match(app, /onClick=\{\(\) => chooseSuggestion\(suggestion\)\}/u);
+assert.match(app, /value=\{form\.message\}[\s\S]*?onChange=\{updateField\}/u);
+assert.match(app, /function chooseSuggestion\(suggestion\)\s*\{\s*setForm\(\(current\) => \(\{ \.\.\.current, message: suggestion \}\)\)/u);
+assert.match(app, /function handleSubmit\(event\)\s*\{[\s\S]*?setSuggestionsOpen\(false\)/u);
+assert.match(app, /document\.addEventListener\('pointerdown', closeOnOutsidePointer\)/u);
+assert.match(app, /onPointerDown=\{\(event\) => event\.preventDefault\(\)\}/u);
+assert.match(app, /setSuggestionsOpen\(false\)/u);
 assert.match(app, /type="submit"/u);
-console.log('PASS: form source defines landmarks, labels, accessible rating controls, CAPTCHA group, and separate prompt/submit buttons');
+console.log('PASS: form exposes accessible message suggestions, selection, editable text, outside-click handling, and submit/close behavior');
 
 assert.match(adminApp, /\/api\/auth\/me/u);
 assert.match(adminApp, /\/api\/auth\/login/u);
@@ -57,6 +69,9 @@ console.log('PASS: admin query serialization preserves filters/paging and displa
 
 assert.match(css, /@media\s*\(max-width:\s*900px\)/u);
 assert.match(css, /@media\s*\(max-width:\s*560px\)/u);
+assert.match(css, /\.suggestion-list\s*\{[^}]*max-height:\s*164px/u);
+assert.match(css, /@media\s*\(max-width:\s*560px\)\s*\{[\s\S]*?\.suggestion-list\s*\{\s*max-height:\s*138px/u);
+assert.match(css, /\.suggestion-option-active/u);
 assert.match(css, /prefers-reduced-motion:\s*reduce/u);
 assert.match(css, /:focus-visible/u);
 assert.match(adminCss, /@media\s*\(max-width:\s*680px\)/u);

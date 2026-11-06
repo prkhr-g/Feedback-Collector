@@ -146,8 +146,9 @@ npm run dev:client
 ```
 
 The public feedback form is available at `http://localhost:5173`. It validates
-fields before sending, uses an editable prompt suggestion, and requires a
-Turnstile token. Its client validation checks can be run with
+fields before sending, offers optional prewritten feedback statements matched
+to the selected type and rating, and requires a Turnstile token. Suggestions
+filter locally as the visitor types and remain editable. Its client validation checks can be run with
 `npm run test:form --workspace client`.
 
 The Vite client runs at `http://localhost:5173` and proxies `/api` to the

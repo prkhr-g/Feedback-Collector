@@ -1,3 +1,5 @@
+import { FEEDBACK_SUGGESTIONS } from '../data/feedbackSuggestions.js';
+
 export const FEEDBACK_TYPES = [
   'General feedback',
   'Bug report',
@@ -46,12 +48,31 @@ export function validateFeedbackForm(values, turnstileToken) {
   return errors;
 }
 
-/** Choose an editable starter prompt from the selected category and rating. */
-export function getSuggestedPrompt(feedbackType, rating) {
-  if (feedbackType === 'Bug report' && rating >= 1 && rating <= 2) return 'What went wrong, and what did you expect to happen?';
-  if (feedbackType === 'Feature request') return 'What would you like to be able to do?';
-  if (feedbackType === 'Appreciation' && rating >= 4) return 'What worked particularly well for you?';
-  if (feedbackType === 'Complaint') return 'What happened, and what would have made the experience better?';
-  if (feedbackType === 'General feedback') return 'What could we improve?';
-  return 'What would you like us to know?';
+/** Return matching feedback statements for a type, rating, and current message. */
+export function getFeedbackSuggestions(feedbackType, rating, currentMessage = '') {
+  const suggestionsByRating = FEEDBACK_SUGGESTIONS[feedbackType];
+  if (!suggestionsByRating) return [];
+
+  const suggestions = Number.isInteger(rating) && rating >= 1 && rating <= 5
+    ? suggestionsByRating[rating]
+    : Object.values(suggestionsByRating).flat();
+  const search = currentMessage.trim().toLocaleLowerCase();
+  if (!search) return suggestions;
+  return suggestions.filter((suggestion) => suggestion.toLocaleLowerCase().includes(search));
+}
+
+/** Map textarea keys to suggestion navigation actions. */
+export function getSuggestionKeyAction(key, activeIndex, suggestionCount) {
+  if (key === 'Escape') return { type: 'close' };
+  if (suggestionCount < 1) return null;
+  if (key === 'ArrowDown') {
+    return { type: 'move', index: activeIndex < 0 ? 0 : (activeIndex + 1) % suggestionCount };
+  }
+  if (key === 'ArrowUp') {
+    return { type: 'move', index: activeIndex < 0 ? suggestionCount - 1 : (activeIndex - 1 + suggestionCount) % suggestionCount };
+  }
+  if (key === 'Enter' && activeIndex >= 0 && activeIndex < suggestionCount) {
+    return { type: 'select', index: activeIndex };
+  }
+  return null;
 }

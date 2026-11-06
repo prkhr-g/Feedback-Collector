@@ -21,7 +21,7 @@ the database only; the application retains its own admin authentication.
 
 ### 2. Public submission — 45 seconds
 
-On the public page, show the name, email, feedback type, five-level accessible rating, editable prompt suggestion, message, and Turnstile widget. Enter a disposable demo record and submit it. Point out the confirmation and form reset after success.
+On the public page, show the name, email, feedback type, five-level accessible rating, optional prewritten feedback statements matched to type/rating, editable message, and Turnstile widget. Type to filter suggestions, select and edit one, then enter a disposable demo record and submit it. Point out the confirmation and form reset after success.
 
 “The browser validates for usability. The API validates again, normalizes name/email/message values, checks the allowed type and rating, applies rate limiting, verifies the CAPTCHA token server-side, and only then inserts the record.”
 

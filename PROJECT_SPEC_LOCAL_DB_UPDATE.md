@@ -273,7 +273,7 @@ This update does **not** remove or weaken any of the following requirements from
 
 - Public feedback form with name, email, and message.
 - Feedback type and five-level illustrated rating.
-- Editable suggested prompts based on type/rating.
+- Optional, editable prewritten feedback statements selected by type/rating and filtered as the visitor types; no generated questions or AI service.
 - Cloudflare Turnstile CAPTCHA with server-side verification.
 - Protected admin login.
 - Feedback list, keyword/date/type/rating filters, sorting and server-side pagination.
