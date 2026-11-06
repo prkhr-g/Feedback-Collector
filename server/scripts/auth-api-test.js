@@ -55,8 +55,8 @@ try {
 
   const passwordHash = await auth.hashAdminPassword(password);
   assert.match(passwordHash, /^\$2[aby]\$12\$/u);
-  const [result] = await pool.execute('INSERT INTO admins (email, password_hash) VALUES (?, ?)', [email, passwordHash]);
-  adminId = result.insertId;
+  const result = await pool.query('INSERT INTO admins (email, password_hash) VALUES ($1, $2) RETURNING id', [email, passwordHash]);
+  adminId = result.rows[0].id;
 
   assert.equal(await auth.verifyAdminPassword(password, passwordHash), true);
   assert.equal(await auth.verifyAdminPassword(`${password}x`, passwordHash), false);
@@ -86,14 +86,14 @@ try {
   const legacySalt = randomBytes(16);
   const legacyKey = await scrypt(legacyPassword, legacySalt, 64, { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 });
   const legacyHash = `scrypt$16384$8$1$${legacySalt.toString('base64url')}$${legacyKey.toString('base64url')}`;
-  const [legacyResult] = await pool.execute(
-    'INSERT INTO admins (email, password_hash) VALUES (?, ?)', [legacyEmail, legacyHash],
+  const legacyResult = await pool.query(
+    'INSERT INTO admins (email, password_hash) VALUES ($1, $2) RETURNING id', [legacyEmail, legacyHash],
   );
-  legacyAdminId = legacyResult.insertId;
+  legacyAdminId = legacyResult.rows[0].id;
   response = await request(port, '/api/auth/login', { method: 'POST', body: { email: legacyEmail, password: legacyPassword } });
   assert.equal(response.status, 200);
-  const [upgradedRows] = await pool.execute('SELECT password_hash FROM admins WHERE id = ?', [legacyAdminId]);
-  assert.match(upgradedRows[0].password_hash, /^\$2[aby]\$12\$/u);
+  const upgradedRows = await pool.query('SELECT password_hash FROM admins WHERE id = $1', [legacyAdminId]);
+  assert.match(upgradedRows.rows[0].password_hash, /^\$2[aby]\$12\$/u);
   console.log('PASS: existing scrypt account upgrades to bcrypt after a successful login');
 
   response = await request(port, '/api/auth/me');
@@ -124,8 +124,8 @@ try {
   assert.equal(response.status, 429);
   console.log('PASS: login limiter allows five attempts and rejects the sixth per IP');
 } finally {
-  if (adminId) await pool.execute('DELETE FROM admins WHERE id = ?', [adminId]);
-  if (legacyAdminId) await pool.execute('DELETE FROM admins WHERE id = ?', [legacyAdminId]);
+  if (adminId) await pool.query('DELETE FROM admins WHERE id = $1', [adminId]);
+  if (legacyAdminId) await pool.query('DELETE FROM admins WHERE id = $1', [legacyAdminId]);
   await new Promise((resolve) => server.close(resolve));
   await database.closeDatabasePool();
 }

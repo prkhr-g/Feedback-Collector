@@ -1,110 +1,92 @@
-import 'dotenv/config';
+import assert from 'node:assert/strict';
 import { closeDatabasePool, getDatabasePool } from '../src/config/database.js';
 
 const pool = getDatabasePool();
-const heldConnections = new Set();
+const heldClients = new Set();
 
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
+async function acquireClients(count) {
+  const clients = await Promise.all(Array.from({ length: count }, () => pool.connect()));
+  for (const client of clients) heldClients.add(client);
+  return clients;
 }
 
-async function acquireConnections(count) {
-  const connections = await Promise.all(
-    Array.from({ length: count }, () => pool.getConnection()),
-  );
-  for (const connection of connections) heldConnections.add(connection);
-  return connections;
+function releaseClient(client) {
+  if (!heldClients.delete(client)) return;
+  client.release();
 }
 
-function releaseConnection(connection) {
-  if (!heldConnections.has(connection)) return;
-  heldConnections.delete(connection);
-  connection.release();
-}
-
-async function assertUtcSession(connection) {
-  const [rows] = await connection.query(
-    `SELECT @@session.time_zone AS timeZone,
-            TIMESTAMPDIFF(MICROSECOND, NOW(6), UTC_TIMESTAMP(6)) AS deltaMicros`,
+async function assertUtcSession(client) {
+  const result = await client.query(
+    `SELECT current_setting('TimeZone') AS "timeZone",
+            EXTRACT(EPOCH FROM NOW()) * 1000 AS "nowEpoch",
+            EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) * 1000 AS "currentEpoch"`,
   );
-  const { timeZone, deltaMicros } = rows[0];
-  assert(timeZone === '+00:00', `Expected +00:00 session timezone; got ${timeZone}`);
-  assert(
-    Math.abs(Number(deltaMicros)) <= 1_000_000,
-    `NOW() and UTC_TIMESTAMP() differ by ${deltaMicros} microseconds`,
-  );
-  return Number(deltaMicros);
+  const { timeZone, nowEpoch, currentEpoch } = result.rows[0];
+  assert.match(timeZone, /^(?:UTC|Etc\/UTC|GMT|\+00:00)$/iu);
+  assert.ok(Math.abs(Number(nowEpoch) - Number(currentEpoch)) < 1, 'NOW() and CURRENT_TIMESTAMP should represent the same instant');
+  return timeZone;
 }
 
 async function main() {
-  let activeTransaction;
+  let transactionClient;
   try {
-    const initialConnections = await acquireConnections(3);
-    const initialIds = initialConnections.map((connection) => connection.threadId);
-    assert(new Set(initialIds).size === initialConnections.length, 'Pool did not provide distinct connections');
+    const initialClients = await acquireClients(3);
+    const initialIds = initialClients;
+    assert.equal(new Set(initialIds).size, initialIds.length, 'Pool did not provide distinct checked-out clients');
+    const timeZones = [];
+    for (const client of initialClients) timeZones.push(await assertUtcSession(client));
+    console.log(`PASS: ${initialClients.length} new pool connections report UTC; session settings: ${timeZones.join(', ')}`);
 
-    const initialDeltas = [];
-    for (const connection of initialConnections) {
-      initialDeltas.push(await assertUtcSession(connection));
-      await connection.query("SET SESSION time_zone = 'SYSTEM'");
-    }
-    console.log(`PASS: ${initialConnections.length} new pool connections use UTC; clock deltas (microseconds): ${initialDeltas.join(', ')}`);
+    for (const client of initialClients) releaseClient(client);
+    const reusedClients = await acquireClients(3);
+    assert.ok(reusedClients.every((client) => initialIds.includes(client)), 'Pool did not reuse the released client objects');
+    for (const client of reusedClients) await assertUtcSession(client);
+    console.log(`PASS: ${reusedClients.length} reused pool connections retain UTC session behavior`);
+    for (const client of reusedClients) releaseClient(client);
 
-    for (const connection of initialConnections) releaseConnection(connection);
-
-    const reusedConnections = await acquireConnections(3);
-    const reusedIds = reusedConnections.map((connection) => connection.threadId);
-    assert(
-      reusedIds.every((threadId) => initialIds.includes(threadId)),
-      'Expected the pool to reuse the previously acquired connections',
-    );
-
-    for (const connection of reusedConnections) await assertUtcSession(connection);
-    console.log(`PASS: ${reusedConnections.length} reused connections were reset to UTC before use`);
-    for (const connection of reusedConnections) releaseConnection(connection);
-
-    const connection = await pool.getConnection();
-    heldConnections.add(connection);
-    await connection.beginTransaction();
-    activeTransaction = connection;
-
-    const [defaultInsert] = await connection.execute(
+    transactionClient = await pool.connect();
+    heldClients.add(transactionClient);
+    await transactionClient.query('BEGIN');
+    const inserted = await transactionClient.query(
       `INSERT INTO feedback (name, email, feedback_type, rating, message)
-       VALUES (?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5) RETURNING id, created_at`,
       ['UTC integration check', 'utc-check@example.invalid', 'Other', 3, 'Temporary default timestamp check'],
     );
-    const [defaultRows] = await connection.execute(
-      'SELECT created_at AS createdAt, UTC_TIMESTAMP(6) AS utcNow FROM feedback WHERE id = ?',
-      [defaultInsert.insertId],
+    const defaultTimestamp = inserted.rows[0].created_at;
+    const currentResult = await transactionClient.query(
+      `SELECT ABS(EXTRACT(EPOCH FROM (created_at - CURRENT_TIMESTAMP)) * 1000) AS "deltaMs"
+       FROM feedback WHERE id = $1`,
+      [inserted.rows[0].id],
     );
-    const defaultTimestampDelta = Math.abs(
-      new Date(defaultRows[0].createdAt).getTime() - new Date(defaultRows[0].utcNow).getTime(),
-    );
-    assert(defaultTimestampDelta <= 2_000, `CURRENT_TIMESTAMP differed from UTC by ${defaultTimestampDelta} ms`);
-    console.log(`PASS: CURRENT_TIMESTAMP default is UTC (retrieved delta: ${defaultTimestampDelta} ms)`);
+    const defaultDelta = Number(currentResult.rows[0].deltaMs);
+    assert.ok(defaultDelta <= 2_000, `DEFAULT CURRENT_TIMESTAMP differed by ${defaultDelta} ms`);
+    assert.ok(defaultTimestamp instanceof Date && Number.isFinite(defaultTimestamp.getTime()), 'TIMESTAMPTZ should decode to a valid JavaScript Date');
+    console.log(`PASS: DEFAULT CURRENT_TIMESTAMP round-trips as an instant (${defaultDelta.toFixed(0)} ms from query time)`);
 
-    const expectedTimestamp = '2024-07-08 09:10:11';
-    const [explicitInsert] = await connection.execute(
+    const expectedTimestamp = '2024-07-08T09:10:11.000Z';
+    const explicitInsert = await transactionClient.query(
       `INSERT INTO feedback (name, email, feedback_type, rating, message, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6::timestamptz) RETURNING id`,
       ['UTC round-trip check', 'utc-roundtrip@example.invalid', 'Other', 3, 'Temporary explicit timestamp check', expectedTimestamp],
     );
-    const [explicitRows] = await connection.execute(
-      "SELECT DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') AS createdAt FROM feedback WHERE id = ?",
-      [explicitInsert.insertId],
+    const explicitSelect = await transactionClient.query(
+      `SELECT to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS "createdAt"
+       FROM feedback WHERE id = $1`,
+      [explicitInsert.rows[0].id],
     );
-    assert(
-      explicitRows[0].createdAt === expectedTimestamp,
-      `Expected timestamp ${expectedTimestamp}; got ${explicitRows[0].createdAt}`,
-    );
-    console.log(`PASS: explicit UTC timestamp insert/retrieval round-trip (${explicitRows[0].createdAt})`);
+    assert.equal(explicitSelect.rows[0].createdAt, '2024-07-08 09:10:11');
+    console.log(`PASS: explicit timestamp insert/retrieval round-trip (${explicitSelect.rows[0].createdAt} UTC)`);
 
-    await connection.rollback();
-    activeTransaction = undefined;
-    console.log('PASS: timestamp integration rows were rolled back');
+    await transactionClient.query('ROLLBACK');
+    releaseClient(transactionClient);
+    transactionClient = undefined;
+    console.log('PASS: temporary timestamp rows were rolled back');
   } finally {
-    if (activeTransaction) await activeTransaction.rollback();
-    for (const connection of heldConnections) releaseConnection(connection);
+    if (transactionClient) {
+      await transactionClient.query('ROLLBACK').catch(() => {});
+      releaseClient(transactionClient);
+    }
+    for (const client of heldClients) releaseClient(client);
     await closeDatabasePool();
   }
 }

@@ -15,10 +15,12 @@ async function initializeAdmin() {
   }
   const passwordHash = await hashAdminPassword(password);
   try {
-    await getDatabasePool().execute('INSERT INTO admins (email, password_hash) VALUES (?, ?)', [email, passwordHash]);
+    await getDatabasePool().query(
+      'INSERT INTO admins (email, password_hash) VALUES ($1, $2)', [email, passwordHash],
+    );
     console.log('Initial admin created.');
   } catch (error) {
-    if (error.code === 'ER_DUP_ENTRY') throw new Error('An admin with this email already exists; no account was changed.');
+    if (error.code === '23505') throw new Error('An admin with this email already exists; no account was changed.');
     throw error;
   } finally {
     await closeDatabasePool();

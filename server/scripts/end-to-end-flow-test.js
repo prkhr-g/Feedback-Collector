@@ -54,13 +54,24 @@ try {
     server.once('error', reject);
   });
   const port = server.address().port;
-  const [adminResult] = await pool.execute(
-    'INSERT INTO admins (email, password_hash) VALUES (?, ?)',
+  const adminResult = await pool.query(
+    'INSERT INTO admins (email, password_hash) VALUES ($1, $2) RETURNING id',
     [email, await auth.hashAdminPassword(password)],
   );
-  adminId = adminResult.insertId;
+  adminId = adminResult.rows[0].id;
 
-  let response = await request(port, '/api/feedback', {
+  let response = await request(port, '/api/auth/login', { method: 'POST', body: { email, password } });
+  assert.equal(response.status, 200, response.text);
+  const cookie = response.headers['set-cookie'][0].split(';')[0];
+
+  response = await request(port, '/api/admin/dashboard/stats', { cookie });
+  assert.equal(response.status, 200, response.text);
+  const baselineStats = response.json.data;
+  response = await request(port, '/api/admin/dashboard/charts', { cookie });
+  assert.equal(response.status, 200, response.text);
+  const baselineCharts = response.json.data;
+
+  response = await request(port, '/api/feedback', {
     method: 'POST',
     body: {
       name: `QA ${marker}`,
@@ -74,16 +85,31 @@ try {
   assert.equal(response.status, 201, response.text);
   feedbackId = response.json.data.id;
 
-  response = await request(port, '/api/auth/login', { method: 'POST', body: { email, password } });
-  assert.equal(response.status, 200, response.text);
-  const cookie = response.headers['set-cookie'][0].split(';')[0];
-
   response = await request(port, `/api/admin/feedback?${new URLSearchParams({ keyword: marker })}`, { cookie });
   assert.equal(response.status, 200, response.text);
   const record = response.json.data.find((item) => item.id === feedbackId);
   assert.ok(record, 'publicly submitted feedback should appear in the authenticated admin list');
   assert.equal(record.email, `${marker}@example.invalid`);
   assert.equal(record.message, `public submission ${marker}`);
+
+  response = await request(port, '/api/admin/dashboard/stats', { cookie });
+  assert.equal(response.status, 200, response.text);
+  assert.equal(response.json.data.totalFeedback, baselineStats.totalFeedback + 1);
+  assert.ok(response.json.data.todayFeedback >= baselineStats.todayFeedback);
+  assert.ok(response.json.data.thisWeekFeedback >= baselineStats.thisWeekFeedback);
+
+  response = await request(port, '/api/admin/dashboard/charts', { cookie });
+  assert.equal(response.status, 200, response.text);
+  const chartDate = new Date(record.createdAt).toISOString().slice(0, 10);
+  const todayBefore = baselineCharts.feedbackVolume.find((item) => item.date === chartDate)?.count ?? 0;
+  const todayAfter = response.json.data.feedbackVolume.find((item) => item.date === chartDate)?.count;
+  assert.equal(todayAfter, todayBefore + 1);
+  const ratingBefore = baselineCharts.ratingDistribution.find((item) => item.rating === record.rating)?.count ?? 0;
+  const ratingAfter = response.json.data.ratingDistribution.find((item) => item.rating === record.rating)?.count;
+  assert.equal(ratingAfter, ratingBefore + 1);
+  const typeBefore = baselineCharts.feedbackTypeDistribution.find((item) => item.feedbackType === record.feedbackType)?.count ?? 0;
+  const typeAfter = response.json.data.feedbackTypeDistribution.find((item) => item.feedbackType === record.feedbackType)?.count;
+  assert.equal(typeAfter, typeBefore + 1);
 
   response = await request(port, `/api/admin/feedback/export?${new URLSearchParams({ keyword: marker })}`, { cookie });
   assert.equal(response.status, 200, response.text);
@@ -92,13 +118,16 @@ try {
 
   response = await request(port, `/api/admin/feedback/${feedbackId}`, { method: 'DELETE', cookie });
   assert.equal(response.status, 200, response.text);
-  const [rows] = await pool.execute('SELECT id FROM feedback WHERE id = ?', [feedbackId]);
-  assert.equal(rows.length, 0);
+  const rows = await pool.query('SELECT id FROM feedback WHERE id = $1', [feedbackId]);
+  assert.equal(rows.rows.length, 0);
   feedbackId = undefined;
-  console.log('PASS: public submission is verified and stored, then found in the authenticated admin list and CSV export, and deleted through the admin API');
+  response = await request(port, '/api/admin/dashboard/stats', { cookie });
+  assert.equal(response.status, 200, response.text);
+  assert.equal(response.json.data.totalFeedback, baselineStats.totalFeedback);
+  console.log('PASS: public submission is verified and stored, appears in the authenticated admin list and CSV export, updates dashboard totals/charts, and deletion restores the total to baseline');
 } finally {
-  if (feedbackId) await pool.execute('DELETE FROM feedback WHERE id = ?', [feedbackId]);
-  if (adminId) await pool.execute('DELETE FROM admins WHERE id = ?', [adminId]);
+  if (feedbackId) await pool.query('DELETE FROM feedback WHERE id = $1', [feedbackId]);
+  if (adminId) await pool.query('DELETE FROM admins WHERE id = $1', [adminId]);
   await new Promise((resolve) => server.close(resolve));
   await database.closeDatabasePool();
 }

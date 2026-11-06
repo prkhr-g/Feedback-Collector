@@ -6,8 +6,12 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "db:init": "node scripts/initialize-database.js",
+    "db:migrate:mysql": "node scripts/migrate-mysql-to-neon.js",
+    "db:migration-test": "node scripts/migration-plan-test.js",
     "db:smoke": "node scripts/database-smoke-test.js",
     "db:integration": "node scripts/database-integration-test.js",
+    "db:config-test": "node scripts/database-config-test.js",
     "api:public-test": "node scripts/public-feedback-test.js",
     "admin:init": "node scripts/initialize-admin.js",
     "api:auth-test": "node scripts/auth-api-test.js",
@@ -21,6 +25,9 @@
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
     "mysql2": "^3.14.3"
   }
 }

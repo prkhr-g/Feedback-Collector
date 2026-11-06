@@ -20,7 +20,7 @@ export function securityHeaders(_request, response, next) {
   });
 
   if (process.env.NODE_ENV === 'production') {
-    response.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    response.setHeader('Strict-Transport-Security', 'max-age=31536000');
   }
 
   next();

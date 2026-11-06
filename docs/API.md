@@ -123,7 +123,7 @@ Permanently deletes one record and requires an exact `Origin` match with
 record does not exist.
 
 These queries use bound parameters for all values. Sort clauses are selected
-from fixed server-side SQL fragments. Count and page selection run in MySQL;
+from fixed server-side SQL fragments. Count and page selection run in PostgreSQL;
 the server does not fetch all feedback to paginate in memory. Add API
 integration fixtures with `npm run api:admin-feedback-test --workspace server`.
 Verify protected CSV downloads and tricky cell values with
@@ -153,8 +153,8 @@ Returns three bounded datasets in `data`:
 - `feedbackTypeDistribution`: six `{ "feedbackType": "...", "count": n }`
   items for the supported feedback types, including zero-count types.
 
-The statistics use conditional aggregates. Chart data is grouped in MySQL;
+The statistics use conditional aggregates. Chart data is grouped in PostgreSQL;
 the API fills the bounded daily/rating/type result series with zeroes. All
-date grouping and boundaries use UTC `DATETIME` values, consistent with the
-database pool's UTC session configuration. Run known-row coverage with
+date grouping converts PostgreSQL `TIMESTAMPTZ` instants to UTC explicitly.
+Run known-row coverage with
 `npm run api:dashboard-test --workspace server`.

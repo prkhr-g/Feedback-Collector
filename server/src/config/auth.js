@@ -10,6 +10,9 @@ export function getAuthConfig(env = process.env) {
   } catch {
     throw new Error('CLIENT_ORIGIN must be set to an absolute URL');
   }
+  if (env.NODE_ENV === 'production' && new URL(originValue).protocol !== 'https:') {
+    throw new Error('CLIENT_ORIGIN must use HTTPS in production');
+  }
   const expiresIn = env.JWT_EXPIRES_IN?.trim() || '1d';
   const match = /^(\d+)(s|m|h|d)$/u.exec(expiresIn);
   if (!match || Number(match[1]) < 1) throw new Error('JWT_EXPIRES_IN must be a positive number followed by s, m, h, or d');

@@ -79,8 +79,8 @@ try {
 
   const password = 'phase-six-integration-password';
   const passwordHash = await auth.hashAdminPassword(password);
-  const [adminResult] = await pool.execute('INSERT INTO admins (email, password_hash) VALUES (?, ?)', [adminEmail, passwordHash]);
-  adminId = adminResult.insertId;
+  const adminResult = await pool.query('INSERT INTO admins (email, password_hash) VALUES ($1, $2) RETURNING id', [adminEmail, passwordHash]);
+  adminId = adminResult.rows[0].id;
   let response = await request(port, '/api/auth/login', { method: 'POST', body: { email: adminEmail, password } });
   assert.equal(response.status, 200);
   const cookie = response.headers['set-cookie'][0].split(';')[0];
@@ -93,13 +93,13 @@ try {
   const baselineCharts = baselineChartsResponse.body.data;
 
   for (const [index, fixture] of fixtures.entries()) {
-    const [result] = await pool.execute(
+    const result = await pool.query(
       `INSERT INTO feedback (name, email, feedback_type, rating, message, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6::timestamptz) RETURNING id`,
       [`Dashboard fixture ${suffix} ${index}`, `fixture-${index}-${suffix}@example.invalid`, fixture.feedbackType,
-        fixture.rating, `Known dashboard fixture ${suffix}`, fixture.date],
+        fixture.rating, `Known dashboard fixture ${suffix}`, `${fixture.date.replace(' ', 'T')}Z`],
     );
-    insertedIds.push(result.insertId);
+    insertedIds.push(result.rows[0].id);
   }
 
   const statsResponse = await request(port, '/api/admin/dashboard/stats', { cookie });
@@ -133,10 +133,9 @@ try {
   console.log('PASS: 30-day volume, rating, and feedback-type charts match known fixture deltas and remain bounded');
 } finally {
   if (insertedIds.length) {
-    const placeholders = insertedIds.map(() => '?').join(',');
-    await pool.execute(`DELETE FROM feedback WHERE id IN (${placeholders})`, insertedIds);
+    await pool.query('DELETE FROM feedback WHERE id = ANY($1::bigint[])', [insertedIds]);
   }
-  if (adminId) await pool.execute('DELETE FROM admins WHERE id = ?', [adminId]);
+  if (adminId) await pool.query('DELETE FROM admins WHERE id = $1', [adminId]);
   await new Promise((resolve) => server.close(resolve));
   await database.closeDatabasePool();
 }

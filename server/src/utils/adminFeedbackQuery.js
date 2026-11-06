@@ -39,7 +39,7 @@ export function parseAdminFeedbackQuery(query) {
   if (validUtcDate(startDate) && validUtcDate(endDate) && startDate > endDate) {
     errors.dateRange = 'Start date must be on or before end date.';
   }
-  if (endDate === '9999-12-31') errors.endDate = 'End date is outside the supported MySQL date range.';
+  if (endDate === '9999-12-31') errors.endDate = 'End date is outside the supported YYYY-MM-DD range.';
 
   const feedbackType = singleString(query.feedbackType);
   if (query.feedbackType !== undefined && (feedbackType === undefined || !FEEDBACK_TYPES.has(feedbackType))) {

@@ -2,49 +2,48 @@
 
 The application uses React with Vite for the browser UI and Express for the
 REST API. During local development, Vite proxies `/api` requests to Express.
-The data flow is:
+For production, Express serves the built React app and SPA routes from the same
+origin as the API; root `npm run build` and `npm start` are the deployment
+commands. The API is same-origin, so no production CORS policy is needed.
+The backend connects through Neon's pooled PostgreSQL URL using the `pg` pool:
 
 ```text
-React browser → Express REST API → mysql2 connection pool → local MySQL
+React browser → Vite /api proxy → Express REST API → pg connection pool → Neon PostgreSQL
 ```
 
-The frontend never connects directly to MySQL and never receives database
-credentials. `server/src/config/database.js` reads connection settings from
-environment variables and creates one bounded promise-based connection pool.
-The server checks required database settings and a connection at startup.
+The frontend never connects directly to PostgreSQL and never receives database
+credentials. Runtime configuration comes from `DATABASE_URL` in the ignored
+root `.env.local`; schema initialization uses the direct `DATABASE_URL_UNPOOLED`
+value. The pool is bounded to five connections and validates the URL before
+server startup. PostgreSQL `TIMESTAMPTZ` stores instants consistently; reports
+and date filters explicitly use UTC boundaries, independent of session display
+timezone.
 
-`server/sql/schema.sql` creates the `feedback_collector` database and the two
-application tables: `feedback` and `admins`. Timestamps are stored as UTC
-`DATETIME` values. The pool sets `time_zone` to `+00:00` on every connection
-acquisition, including reuse, before application queries run. mysql2's
-`timezone: 'Z'` option separately handles JavaScript date serialization and
-parsing. Database date queries must use UTC boundaries.
+`server/sql/postgres-schema.sql` creates the `feedback` and `admins` tables in
+the already-provisioned database. The repeatable `db:init` script uses the
+unpooled URL and does not create a database or Neon service. The original
+`server/sql/schema.sql` and local MySQL database are retained as a fallback
+after the verified data migration; application runtime does not connect to
+MySQL.
 
 The API exposes `GET /api/health` as a lightweight process check. Public
 submissions follow this path:
 
 ```text
-POST /api/feedback → rate limit → validate/normalize → Cloudflare Siteverify → parameterized MySQL insert
+POST /api/feedback → rate limit → validate/normalize → Cloudflare Siteverify → parameterized PostgreSQL insert
 ```
 
 The React public form validates the same fields for usability, sends feedback
 to the same-origin `/api/feedback` route, and renders Turnstile using only its
-public site key. Its name, email, category, face rating, editable prompt, and
-message remain in React state until a successful submit. Loading, validation,
-success, network, and API failure states are announced accessibly.
+public site key. CAPTCHA secrets remain in the server environment. Provider
+failures and database failures return safe errors.
 
-CAPTCHA secrets remain in the server environment. Provider failures and
-database failures return safe errors. Admin login uses bcrypt with 12 rounds,
-an HS256 JWT in an HttpOnly, SameSite=Lax cookie, and exact Origin checks on
-state-changing auth requests. `/api/auth/me` checks the session and returns
-only the admin ID and email. Protected feedback management routes apply validated
-keyword/date/type/rating filters in parameterized MySQL queries, count before
-server-side pagination, choose sort clauses from a fixed allowlist, and
-require same-origin protection for permanent deletion. Protected dashboard
-APIs use UTC day boundaries, count Monday-through-current-day UTC week volume,
-and return bounded chart datasets: 30 daily counts, five ratings, and six
-feedback types. The protected CSV export reuses those validated filters,
-ignores page size, caps retrieval at 10,001 rows before rejecting over-cap
-exports, quotes CSV cells, and neutralizes spreadsheet formulas. The React admin application checks `/api/auth/me` on entry,
-uses the HttpOnly cookie for protected calls, and keeps filter, paging, and
-dashboard state in component state rather than browser storage.
+Admin login remains application-level and uses bcrypt with 12 rounds, an HS256
+JWT in an HttpOnly, SameSite=Lax cookie, and exact Origin checks on
+state-changing auth requests. Neon Auth is disabled. Protected feedback routes
+apply validated keyword/date/type/rating filters in parameterized PostgreSQL
+queries, count before server-side pagination, select sort clauses from a fixed
+allowlist, and require same-origin protection for deletion. Dashboard queries
+use UTC day boundaries and return bounded datasets: 30 daily counts, five
+ratings, and six feedback types. CSV export reuses those filters, caps
+retrieval at 10,001 rows, quotes cells, and neutralizes spreadsheet formulas.

@@ -66,22 +66,22 @@ export function verifyAdminToken(token, secret) {
 }
 
 export async function upgradeLegacyAdminPasswordHash(id, oldHash, newHash) {
-  await getDatabasePool().execute(
-    'UPDATE admins SET password_hash = ? WHERE id = ? AND password_hash = ?',
+  await getDatabasePool().query(
+    'UPDATE admins SET password_hash = $1 WHERE id = $2 AND password_hash = $3',
     [newHash, id, oldHash],
   );
 }
 
 export async function findAdminByEmail(email) {
-  const [rows] = await getDatabasePool().execute(
-    'SELECT id, email, password_hash FROM admins WHERE email = ? LIMIT 1', [email],
+  const result = await getDatabasePool().query(
+    'SELECT id, email, password_hash FROM admins WHERE email = $1 LIMIT 1', [email],
   );
-  return rows[0] ?? null;
+  return result.rows[0] ?? null;
 }
 
 export async function findAdminById(id) {
-  const [rows] = await getDatabasePool().execute(
-    'SELECT id, email FROM admins WHERE id = ? LIMIT 1', [id],
+  const result = await getDatabasePool().query(
+    'SELECT id, email FROM admins WHERE id = $1 LIMIT 1', [id],
   );
-  return rows[0] ?? null;
+  return result.rows[0] ?? null;
 }

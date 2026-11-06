@@ -107,18 +107,18 @@ try {
   const port = server.address().port;
   assert.equal((await request(port, '/api/admin/feedback/export')).status, 401);
 
-  const [adminResult] = await pool.execute(
-    'INSERT INTO admins (email, password_hash) VALUES (?, ?)',
+  const adminResult = await pool.query(
+    'INSERT INTO admins (email, password_hash) VALUES ($1, $2) RETURNING id',
     [email, await auth.hashAdminPassword(password)],
   );
-  adminId = adminResult.insertId;
+  adminId = adminResult.rows[0].id;
   for (const record of records) {
-    const [result] = await pool.execute(
+    const result = await pool.query(
       `INSERT INTO feedback (name, email, feedback_type, rating, message, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [record.name, record.email, record.type, record.rating, record.message, record.created],
+       VALUES ($1, $2, $3, $4, $5, $6::timestamptz) RETURNING id`,
+      [record.name, record.email, record.type, record.rating, record.message, `${record.created.replace(' ', 'T')}Z`],
     );
-    insertedIds.push(result.insertId);
+    insertedIds.push(result.rows[0].id);
   }
 
   let response = await request(port, '/api/auth/login', { method: 'POST', body: { email, password } });
@@ -170,10 +170,9 @@ try {
   console.log('PASS: export row limit is fixed at 10,000 and leading tabs are neutralized');
 } finally {
   if (insertedIds.length) {
-    const placeholders = insertedIds.map(() => '?').join(',');
-    await pool.execute(`DELETE FROM feedback WHERE id IN (${placeholders})`, insertedIds);
+    await pool.query('DELETE FROM feedback WHERE id = ANY($1::bigint[])', [insertedIds]);
   }
-  if (adminId) await pool.execute('DELETE FROM admins WHERE id = ?', [adminId]);
+  if (adminId) await pool.query('DELETE FROM admins WHERE id = $1', [adminId]);
   await new Promise((resolve) => server.close(resolve));
   await database.closeDatabasePool();
 }

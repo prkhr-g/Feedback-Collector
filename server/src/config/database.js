@@ -1,77 +1,65 @@
-import { readFileSync } from 'node:fs';
-import mysql from 'mysql2/promise';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
+import pg from 'pg';
+
+const { Pool, types } = pg;
+const configDirectory = dirname(fileURLToPath(import.meta.url));
+
+// Local Neon CLI variables live at the repository root. The server's local
+// file remains available for application secrets and is never committed.
+dotenv.config({ path: resolve(configDirectory, '../../../.env.local') });
+dotenv.config({ path: resolve(configDirectory, '../../.env') });
 
 let pool;
 
-/**
- * Create or return the shared MySQL connection pool.
- *
- * Connection values come from the environment so local MySQL is the default
- * setup while other MySQL-compatible servers remain configurable.
- *
- * @param {NodeJS.ProcessEnv} [env=process.env] Database configuration values.
- * @returns {import('mysql2/promise').Pool} Shared promise-based connection pool.
- * @throws {Error} If required connection settings or TLS configuration are invalid.
- */
+const safeIntegerParser = (value) => {
+  const number = Number(value);
+  return Number.isSafeInteger(number) ? number : value;
+};
+
+function validateDatabaseUrl(value) {
+  if (!value?.trim()) throw new Error('Missing required database configuration: DATABASE_URL');
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error('DATABASE_URL must be a valid PostgreSQL connection URL');
+  }
+  if (!['postgres:', 'postgresql:'].includes(url.protocol) || !url.hostname || !url.pathname.slice(1)) {
+    throw new Error('DATABASE_URL must include a PostgreSQL protocol, host, and database name');
+  }
+  return value.trim();
+}
+
+/** Create a bounded PostgreSQL pool using the pooled Neon URL at runtime. */
+export function createDatabasePool(env = process.env) {
+  const connectionString = validateDatabaseUrl(env.DATABASE_URL);
+  const databasePool = new Pool({
+    connectionString,
+    max: 5,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
+    types: {
+      getTypeParser(oid, format) {
+        if (oid === 20 && format === 'text') return safeIntegerParser;
+        return types.getTypeParser(oid, format);
+      },
+    },
+  });
+  databasePool.on('error', () => {
+    console.error('Unexpected error on an idle PostgreSQL connection.');
+  });
+  return databasePool;
+}
+
+/** Return the shared application pool. */
 export function getDatabasePool(env = process.env) {
-  if (pool) return pool;
-
-  const required = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
-  const missing = required.filter((key) => !env[key]?.trim());
-  if (missing.length > 0) {
-    throw new Error(`Missing required database configuration: ${missing.join(', ')}`);
-  }
-
-  const port = Number(env.DB_PORT || 3306);
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    throw new Error('DB_PORT must be a valid TCP port');
-  }
-
-  if (env.DB_SSL && !['true', 'false'].includes(env.DB_SSL)) {
-    throw new Error('DB_SSL must be either true or false');
-  }
-
-  const sslEnabled = env.DB_SSL === 'true';
-  let ssl;
-  if (sslEnabled) {
-    ssl = { minVersion: 'TLSv1.2' };
-    if (env.DB_SSL_CA_PATH?.trim()) {
-      ssl.ca = readFileSync(env.DB_SSL_CA_PATH.trim());
-    }
-  }
-
-  pool = mysql.createPool({
-    host: env.DB_HOST.trim(),
-    port,
-    user: env.DB_USER.trim(),
-    password: env.DB_PASSWORD,
-    database: env.DB_NAME.trim(),
-    waitForConnections: true,
-    connectionLimit: 5,
-    queueLimit: 0,
-    timezone: 'Z',
-    ssl,
-  });
-
-  // `timezone: 'Z'` controls mysql2's JavaScript date conversion. This SQL
-  // setting controls MySQL's CURRENT_TIMESTAMP/NOW() for every acquisition.
-  // mysql2 queues this before resolving getConnection(), including for pooled
-  // connections that are being reused. If setup fails, discard that session
-  // rather than let an application query run with an unknown timezone.
-  pool.on('acquire', (connection) => {
-    connection.query("SET SESSION time_zone = '+00:00'", (error) => {
-      if (error) connection.destroy();
-    });
-  });
-
+  if (!pool) pool = createDatabasePool(env);
   return pool;
 }
 
-/**
- * Close the shared pool cleanly, if it has been created.
- *
- * @returns {Promise<void>} Resolves after all pool connections close.
- */
+/** Close the shared pool cleanly, if it has been created. */
 export async function closeDatabasePool() {
   if (!pool) return;
   const activePool = pool;

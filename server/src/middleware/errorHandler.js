@@ -25,7 +25,7 @@ export function errorHandler(error, _request, response, next) {
     });
   }
 
-  if (error.code && /^(?:ER_|PROTOCOL_|ECONN)/u.test(error.code)) {
+  if (error.code && /^(?:08|53|57P\d|ECONN|EACCES|EHOSTUNREACH|ETIMEDOUT|ENOTFOUND)/u.test(error.code)) {
     return response.status(503).json({
       success: false,
       message: 'The request could not be completed right now. Please try again.',

@@ -21,23 +21,24 @@ browser's HttpOnly session cookie. JWTs stay out of JavaScript storage.
 Filtering and pagination are sent to the server, and the permanent-delete
 confirmation names the selected feedback before issuing the request.
 
-## Local MySQL for the assignment
+## Neon PostgreSQL migration
 
-MySQL Community Server on the developer's computer is the default database
-for the one-week assignment. The expected submission is a GitHub repository,
-so a hosted database and public deployment are deferred. Database connection
-settings remain environment-based so a later MySQL-compatible migration can
-be evaluated without embedding credentials in source. Any live hosting or
-hosted database choice requires the developer's explicit approval.
+The currently approved deployment strategy replaces the app's local MySQL
+runtime with Neon PostgreSQL, with Neon used only as a database. Neon Auth is
+disabled; the existing application-level admin login, JWT cookie, password
+hashing, and authorization remain in place. The frontend continues to call
+the same Express API and preserves its current UI and features.
 
-The backend uses `mysql2/promise` with a shared pool capped at five
-connections. Local development uses the standard MySQL port and does not
-require TLS. TLS remains configurable for a separately approved hosted
-database. The pool executes `SET SESSION time_zone = '+00:00'` every time a
-connection is acquired, so new and reused sessions evaluate
-`CURRENT_TIMESTAMP` in UTC. mysql2's `timezone: 'Z'` setting handles JS Date
-conversion; it does not set the MySQL session timezone. Timestamps use UTC
-`DATETIME` values for consistent filtering and display.
+Runtime uses the pooled `DATABASE_URL` with the Node `pg` package and a bounded
+five-connection pool. Repeatable schema setup uses
+`DATABASE_URL_UNPOOLED`. Both values come from the ignored root `.env.local`
+populated by the Neon CLI. Timestamps use PostgreSQL `TIMESTAMPTZ` and query
+boundaries use UTC explicitly so report dates do not depend on session display
+timezone.
+
+The local MySQL database and `server/sql/schema.sql` remain untouched as a
+fallback during the approved one-time data migration. The project must not
+enable paid services, payment methods, or billing-based fallbacks.
 
 ## Admin authentication primitives
 

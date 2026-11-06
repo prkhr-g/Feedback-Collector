@@ -112,15 +112,15 @@ try {
   assert.match(contentSecurityPolicy, /frame-src https:\/\/challenges\.cloudflare\.com/u);
   console.log('PASS: Content Security Policy permits the Turnstile script and iframe origins');
 
-  const [storedRows] = await pool.execute(
-    'SELECT name, email, feedback_type AS feedbackType, rating, message FROM feedback WHERE id = ?',
+  const storedResult = await pool.query(
+    'SELECT name, email, feedback_type AS "feedbackType", rating, message FROM feedback WHERE id = $1',
     [insertedId],
   );
-  assert.equal(storedRows.length, 1);
-  assert.equal(storedRows[0].name, 'Zoë O’Connor');
-  assert.equal(storedRows[0].email, validPayload.email.trim().toLowerCase());
-  assert.equal(storedRows[0].message, '<script>alert("text")</script>');
-  await pool.execute('DELETE FROM feedback WHERE id = ?', [insertedId]);
+  assert.equal(storedResult.rows.length, 1);
+  assert.equal(storedResult.rows[0].name, validPayload.name.trim());
+  assert.equal(storedResult.rows[0].email, validPayload.email.trim().toLowerCase());
+  assert.equal(storedResult.rows[0].message, validPayload.message.trim());
+  await pool.query('DELETE FROM feedback WHERE id = $1', [insertedId]);
   insertedId = undefined;
   console.log('PASS: valid request verifies CAPTCHA and stores normalized Unicode/text data');
 
@@ -136,11 +136,11 @@ try {
   const captchaRejected = await sendRequest(port, validPayload);
   assert.equal(captchaRejected.status, 400);
   assert.equal(captchaRejected.body.success, false);
-  const [rejectedRows] = await pool.execute(
-    'SELECT COUNT(*) AS count FROM feedback WHERE email = ?',
+  const rejectedRows = await pool.query(
+    'SELECT COUNT(*) AS count FROM feedback WHERE email = $1',
     [validPayload.email.trim().toLowerCase()],
   );
-  assert.equal(Number(rejectedRows[0].count), 0);
+  assert.equal(Number(rejectedRows.rows[0].count), 0);
   console.log('PASS: rejected CAPTCHA does not create feedback');
 
   siteverifyMode = 'unavailable';
@@ -162,7 +162,7 @@ try {
   console.log('PASS: sixth attempt is rate limited before body validation and Siteverify');
 } finally {
   if (insertedId) {
-    await getDatabasePool().execute('DELETE FROM feedback WHERE id = ?', [insertedId]);
+    await getDatabasePool().query('DELETE FROM feedback WHERE id = $1', [insertedId]);
   }
   await new Promise((resolve) => server.close(resolve));
   await closeDatabasePool();

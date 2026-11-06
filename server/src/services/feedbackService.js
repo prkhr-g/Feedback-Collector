@@ -7,11 +7,11 @@ import { getDatabasePool } from '../config/database.js';
  * @returns {Promise<number>} Inserted record ID.
  */
 export async function createFeedback(feedback) {
-  const pool = getDatabasePool();
-  const [result] = await pool.execute(
+  const result = await getDatabasePool().query(
     `INSERT INTO feedback (name, email, feedback_type, rating, message)
-     VALUES (?, ?, ?, ?, ?)`,
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id`,
     [feedback.name, feedback.email, feedback.feedbackType, feedback.rating, feedback.message],
   );
-  return result.insertId;
+  return result.rows[0].id;
 }

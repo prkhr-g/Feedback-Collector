@@ -1,6 +1,12 @@
 # PROJECT_SPEC_LOCAL_DB_UPDATE.md
 ## Addendum and superseding instructions for Codex CLI
 
+> Historical database/deployment decision: this local-MySQL addendum was
+> superseded by the developer's later approved Neon PostgreSQL migration and
+> public-deployment decision. Its product, feature, security, and phase-by-phase
+> workflow requirements remain applicable where they do not conflict with that
+> later decision.
+
 **Project:** Feedback Collector — Penthara Technologies selection assignment  
 **Purpose:** This file updates the previously supplied `PROJECT_SPEC.md`. It changes the database and deployment assumptions from cloud-first to local-first. It also clarifies the implementation workflow so work already performed by Codex is preserved.
 

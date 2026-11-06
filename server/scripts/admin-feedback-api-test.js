@@ -69,15 +69,15 @@ try {
 
   const password = 'phase-five-integration-password';
   const hash = await auth.hashAdminPassword(password);
-  const [adminResult] = await pool.execute('INSERT INTO admins (email, password_hash) VALUES (?, ?)', [adminEmail, hash]);
-  adminId = adminResult.insertId;
+  const adminResult = await pool.query('INSERT INTO admins (email, password_hash) VALUES ($1, $2) RETURNING id', [adminEmail, hash]);
+  adminId = adminResult.rows[0].id;
   for (const record of records) {
-    const [result] = await pool.execute(
+    const result = await pool.query(
       `INSERT INTO feedback (name, email, feedback_type, rating, message, created_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [record.name, record.email, record.type, record.rating, record.message, record.created],
+       VALUES ($1, $2, $3, $4, $5, $6::timestamptz) RETURNING id`,
+      [record.name, record.email, record.type, record.rating, record.message, `${record.created.replace(' ', 'T')}Z`],
     );
-    insertedIds.push(result.insertId);
+    insertedIds.push(result.rows[0].id);
   }
 
   response = await request(port, '/api/auth/login', { method: 'POST', body: { email: adminEmail, password } });
@@ -142,10 +142,9 @@ try {
   console.log('PASS: delete requires same Origin and removes only the parameterized target row');
 } finally {
   if (insertedIds.length) {
-    const placeholders = insertedIds.map(() => '?').join(',');
-    await pool.execute(`DELETE FROM feedback WHERE id IN (${placeholders})`, insertedIds);
+    await pool.query('DELETE FROM feedback WHERE id = ANY($1::bigint[])', [insertedIds]);
   }
-  if (adminId) await pool.execute('DELETE FROM admins WHERE id = ?', [adminId]);
+  if (adminId) await pool.query('DELETE FROM admins WHERE id = $1', [adminId]);
   await new Promise((resolve) => server.close(resolve));
   await database.closeDatabasePool();
 }

@@ -2,72 +2,57 @@
 
 A full-stack feedback collection application for the Penthara Technologies
 selection assignment. The project is being built in approved phases. The
-current implementation includes a React/Vite client, an Express health
-endpoint, local MySQL integration, the public feedback form and submission
-API, admin authentication, feedback management, dashboard data APIs, and
-filtered CSV export. Integration and quality checks are the current focus.
+current implementation includes a React/Vite client, an Express API, Neon
+PostgreSQL integration, the public feedback form and submission API, existing
+application-level admin authentication, feedback management, dashboard data
+APIs, and filtered CSV export. The approved one-time migration of local
+MySQL data to Neon has been completed and verified. Public deployment remains
+a separate phase.
 
 ## Stack
 
 - React, Vite, and Tailwind CSS
 - Node.js and Express
-- MySQL Community Server with `mysql2/promise`
+- Neon PostgreSQL with the `pg` connection pool
 - Cloudflare Turnstile for the public form (server-side verification)
 
 ## Prerequisites
 
 - Node.js 22.12 or newer and npm
-- MySQL Community Server 8.0 or newer
-- Optional: MySQL Workbench for a graphical SQL editor
+- Neon project access for the configured project
 
-On Windows, install MySQL Community Server from the [official MySQL downloads
-page](https://dev.mysql.com/downloads/). MySQL Workbench is optional.
+Neon is used only as PostgreSQL hosting. The application keeps its existing
+admin login; Neon Auth is disabled. Runtime uses Neon's pooled `DATABASE_URL`;
+schema initialization uses `DATABASE_URL_UNPOOLED`.
 
-## Local MySQL setup (Windows)
+## Neon environment setup
 
-1. Install and configure MySQL Community Server. Choose a strong local
-   administrator password during setup.
-2. Start its Windows service. Find the installed service name with:
+The project has already been initialized with the Neon CLI. To refresh local
+environment values from the project root, run:
 
-   ```powershell
-   Get-Service *MySQL*
-   ```
+```powershell
+neon deploy
+```
 
-   If it is stopped, start it from Windows Services, or run PowerShell as
-   Administrator and use `Start-Service <service-name>` with the name shown
-   above. MySQL's Windows service behavior is described in the [official
-   manual](https://dev.mysql.com/doc/refman/8.4/en/windows-start-service.html).
-3. Create the database and tables by opening `server/sql/schema.sql` in
-   MySQL Workbench and executing it, or by piping it into the MySQL CLI from
-   the repository root:
-
-   ```powershell
-   Get-Content -Raw server/sql/schema.sql | mysql -u root -p
-   ```
-
-   The schema creates `feedback_collector` with `utf8mb4` character encoding,
-   then creates the `feedback` and `admins` tables.
-4. Create a restricted local application account in Workbench or the MySQL
-   CLI. Replace the password placeholder with a password you choose locally;
-   do not put a real password in this README or in SQL committed to Git:
-
-   ```sql
-   CREATE USER 'feedback_app'@'localhost' IDENTIFIED BY 'choose_a_local_password';
-   GRANT SELECT, INSERT, UPDATE, DELETE ON feedback_collector.* TO 'feedback_app'@'localhost';
-   ```
+The CLI writes `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, and `NEON_BRANCH` to
+the ignored root `.env.local`. Never commit or print that file. Copy
+`server/.env.example` to `server/.env` for application secrets and local
+settings such as JWT, Turnstile, admin initialization, and client origin.
 
 ## Configure environment
 
-Copy the example and edit `server/.env` with your local MySQL application
-account values:
+Copy the example and edit `server/.env` with application secrets and runtime
+settings:
 
 ```powershell
 Copy-Item server/.env.example server/.env
 ```
 
-Set `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME`. The example
-uses `localhost:3306` and `feedback_collector`. Generate a local JWT secret
-with Node and paste the result into `JWT_SECRET`:
+Set `JWT_SECRET`, `TURNSTILE_SECRET_KEY`, `CLIENT_ORIGIN`, and any admin
+initialization values there. PostgreSQL URLs come from the root `.env.local`.
+The optional `DB_*` values are used only to read the local MySQL source during
+the one-time migration; the running app does not use them.
+Generate a local JWT secret with Node and paste the result into `JWT_SECRET`:
 
 ```powershell
 node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
@@ -94,8 +79,8 @@ secret in a `VITE_` variable. Restart Vite after changing the client file.
 
 There is no public admin registration route. To create the first admin, set
 `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the untracked `server/.env`. Use a
-password of at least 12 characters. Then run this once from the repository
-root:
+password of at least 12 characters. First initialize the schema as shown
+below; then run this once from the repository root:
 
 ```powershell
 npm run admin:init --workspace server
@@ -104,6 +89,43 @@ npm run admin:init --workspace server
 The command inserts a bcrypt password hash and refuses to overwrite an
 existing account. Passwords must be at least 12 characters and no more than
 72 UTF-8 bytes (bcrypt's input limit).
+
+Initialize the PostgreSQL schema before the first server start:
+
+```powershell
+npm run db:init --workspace server
+```
+
+This uses `DATABASE_URL_UNPOOLED` and can be run repeatedly. It creates only
+the application tables; it does not create or alter the Neon project/database.
+
+## Migrate existing local MySQL data
+
+The migration reads the local database in a consistent, read-only snapshot and
+uses Neon's direct URL for target checks and inserts. It preserves record IDs,
+admin password hashes, and UTC timestamps. The default command is a dry run;
+it reports source/target counts, matching rows, pending inserts, and conflicts
+without printing record contents or changing either database:
+
+```powershell
+npm run db:migrate:mysql --workspace server
+```
+
+Review the dry-run counts and require zero conflicts before applying. Then run:
+
+```powershell
+npm run db:migrate:mysql --workspace server -- --apply
+```
+
+The apply operation is transactional on Neon and safe to rerun: identical
+target rows are skipped, conflicting IDs or admin emails stop the migration,
+and the local MySQL source is never modified. Keep the local MySQL database as
+the fallback; never commit exports, dumps, feedback text, or credentials. The
+migration plan/date conversion checks can be run with:
+
+```powershell
+npm run db:migration-test --workspace server
+```
 
 ## Install and run
 
@@ -129,9 +151,9 @@ Turnstile token. Its client validation checks can be run with
 `npm run test:form --workspace client`.
 
 The Vite client runs at `http://localhost:5173` and proxies `/api` to the
-Express server at `http://localhost:3000`. The backend checks database
-configuration and connectivity on startup. Confirm the local MySQL service
-is running and `server/.env` is correct if it exits with a database error.
+Express server at `http://localhost:3000`. The backend validates `DATABASE_URL`
+and checks PostgreSQL connectivity on startup. If it exits with a database
+error, confirm Neon connectivity and the ignored root `.env.local`.
 
 To run the database insert/select smoke check after dependencies, schema, and
 environment are ready:
@@ -161,7 +183,7 @@ The check stubs Siteverify for deterministic success and failure cases and
 deletes the test row. A separate manual check with Cloudflare's documented
 Turnstile test keys verifies real outbound Siteverify connectivity.
 
-Run admin authentication integration checks against local MySQL:
+Run admin authentication integration checks against Neon PostgreSQL:
 
 ```powershell
 npm run api:auth-test --workspace server
@@ -175,7 +197,7 @@ rounds. Existing scrypt hashes are upgraded after a successful login.
 `JWT_EXPIRES_IN` accepts a positive duration up to 30 days.
 
 Run protected feedback list/filter/pagination/detail/delete integration
-checks against local MySQL:
+checks against Neon PostgreSQL:
 
 ```powershell
 npm run api:admin-feedback-test --workspace server
@@ -185,7 +207,7 @@ This check creates unique temporary fixture rows and an admin account, tests
 combined filters and boundary cases through the API, then removes its rows.
 
 Run protected dashboard statistics and chart integration checks against
-known temporary MySQL records:
+known temporary PostgreSQL records:
 
 ```powershell
 npm run api:dashboard-test --workspace server
@@ -201,14 +223,14 @@ Download all filtered feedback as a CSV from the admin dashboard. The
 protected export ignores list pagination, returns at most 10,000 rows, includes
 numeric ratings and labels, writes UTC timestamps, and neutralizes spreadsheet
 formula cells. Verify the export
-route and tricky CSV values against local MySQL with:
+route and tricky CSV values against PostgreSQL with:
 
 ```powershell
 npm run api:csv-test --workspace server
 ```
 
-Run the end-to-end public submission → local MySQL → authenticated admin
-list/export/delete flow against local MySQL (Turnstile Siteverify is stubbed
+Run the end-to-end public submission → PostgreSQL → authenticated admin
+list/export/delete flow against Neon (Turnstile Siteverify is stubbed
 for this deterministic integration check):
 
 ```powershell
@@ -217,12 +239,11 @@ npm run api:e2e-test --workspace server
 
 ## Local demo checklist
 
-1. Start the local MySQL Windows service and confirm the `feedback_collector`
-   schema exists. On a first setup, import `server/sql/schema.sql` as described
-   above.
-2. Confirm `server/.env` and `client/.env.local` exist locally and are ignored
-   by Git. The server file must contain a local MySQL account and a long,
-   random `JWT_SECRET`.
+1. Confirm Neon is reachable and `server/sql/postgres-schema.sql` has been
+   initialized with `npm run db:init --workspace server`.
+2. Confirm root `.env.local`, `server/.env`, and `client/.env.local` exist
+   locally and are ignored by Git. `server/.env` must contain a long, random
+   `JWT_SECRET`.
 3. Start `npm run dev:server` and `npm run dev:client` in separate terminals.
    Confirm `http://localhost:3000/api/health` returns `{"success":true,"status":"ok"}`.
 4. Submit a disposable feedback entry at `http://localhost:5173` using the
@@ -248,6 +269,7 @@ npm run test:ui --workspace client
 - [API contract](docs/API.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Decision record](docs/DECISIONS.md)
+- [CEO demo walkthrough](docs/DEMO_WALKTHROUGH.md)
 - [Project specification](PROJECT_SPEC.md)
 - [Local database update](PROJECT_SPEC_LOCAL_DB_UPDATE.md)
 
@@ -261,8 +283,10 @@ npm run test:ui --workspace client
   tokens server-side. Replace test keys with a real Turnstile key pair for
   non-local use. Admin routes require the HttpOnly session cookie; the browser
   does not store JWTs in local or session storage.
-- The project is intended to be demonstrated locally. Cloud hosting and
-  hosted databases are deferred unless explicitly requested.
+- The React/Express application currently runs locally and uses Neon
+  PostgreSQL. The approved MySQL-to-Neon copy was verified; the local MySQL
+  source is retained unchanged as a fallback. Public hosting is a separate
+  approved phase.
 - The initial admin must be initialized manually; there is no public
   registration or password reset flow.
 - The deterministic API checks stub Turnstile Siteverify; test keys used in
@@ -270,3 +294,23 @@ npm run test:ui --workspace client
 - The source snapshot must be committed before a clean GitHub checkout can be
   independently reproduced. Do not commit `.env` files, database dumps, or
   real feedback records.
+
+## Production readiness (before deployment)
+
+The root `build` command creates the React production bundle, and the root
+`start` command starts Express. Express serves `client/dist` and its SPA routes
+alongside `/api`, so one Node web service can host the whole application.
+The server checks Neon, JWT, application origin, and Turnstile configuration
+before listening. In production, `CLIENT_ORIGIN` must be the public HTTPS
+origin, `JWT_SECRET` must be a unique random secret, and Turnstile must use the
+live secret paired with the deployed frontend's public
+`VITE_TURNSTILE_SITE_KEY` build variable.
+
+Set `TRUST_PROXY_HOPS` to the exact number of trusted reverse proxies in front
+of Express (commonly `1` for a single managed host proxy). It defaults to
+`0`; do not set it to `true` or a value larger than the actual proxy chain,
+because client-IP rate limits rely on this trust boundary. The current
+in-memory rate limiters are per process and reset on restart, so they are
+suitable only for the planned single-instance evaluation deployment.
+`GET /api/health` is a process health check; startup separately confirms the
+database is reachable.

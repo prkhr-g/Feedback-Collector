@@ -36,44 +36,44 @@ export function getDashboardBoundaries(now = new Date()) {
 /** Count all records, UTC-today records, and current UTC Monday-to-Sunday records. */
 export async function getDashboardStats(now = new Date()) {
   const range = getDashboardBoundaries(now);
-  const [rows] = await getDatabasePool().execute(
-    `SELECT COUNT(*) AS totalFeedback,
-       COALESCE(SUM(created_at >= ? AND created_at < ?), 0) AS todayFeedback,
-       COALESCE(SUM(created_at >= ? AND created_at < ?), 0) AS thisWeekFeedback
+  const result = await getDatabasePool().query(
+    `SELECT COUNT(*) AS "totalFeedback",
+       COUNT(*) FILTER (WHERE created_at >= $1::timestamptz AND created_at < $2::timestamptz) AS "todayFeedback",
+       COUNT(*) FILTER (WHERE created_at >= $3::timestamptz AND created_at < $2::timestamptz) AS "thisWeekFeedback"
      FROM feedback`,
-    [range.todayStart, range.tomorrowStart, range.weekStart, range.tomorrowStart],
+    [`${range.todayStart}T00:00:00.000Z`, `${range.tomorrowStart}T00:00:00.000Z`, `${range.weekStart}T00:00:00.000Z`],
   );
   return {
-    totalFeedback: Number(rows[0].totalFeedback),
-    todayFeedback: Number(rows[0].todayFeedback),
-    thisWeekFeedback: Number(rows[0].thisWeekFeedback),
+    totalFeedback: Number(result.rows[0].totalFeedback),
+    todayFeedback: Number(result.rows[0].todayFeedback),
+    thisWeekFeedback: Number(result.rows[0].thisWeekFeedback),
   };
 }
 
 /** Return fixed-size UTC daily volume, rating, and feedback-type distributions. */
 export async function getDashboardCharts(now = new Date()) {
   const range = getDashboardBoundaries(now);
-  const typePlaceholders = FEEDBACK_TYPES.map(() => '?').join(', ');
-  const [volumeRows, ratingRows, typeRows] = await Promise.all([
-    getDatabasePool().execute(
-      `SELECT DATE(created_at) AS day, COUNT(*) AS count
-       FROM feedback WHERE created_at >= ? AND created_at < ?
-       GROUP BY DATE(created_at) ORDER BY day ASC`,
-      [`${range.chartStart} 00:00:00`, `${range.chartEnd} 00:00:00`],
+  const typePlaceholders = FEEDBACK_TYPES.map((_, index) => `$${index + 1}`).join(', ');
+  const [volumeResult, ratingResult, typeResult] = await Promise.all([
+    getDatabasePool().query(
+      `SELECT to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, COUNT(*) AS count
+       FROM feedback WHERE created_at >= $1::timestamptz AND created_at < $2::timestamptz
+       GROUP BY day ORDER BY day ASC`,
+      [`${range.chartStart}T00:00:00.000Z`, `${range.chartEnd}T00:00:00.000Z`],
     ),
-    getDatabasePool().execute(
+    getDatabasePool().query(
       `SELECT rating, COUNT(*) AS count FROM feedback
        WHERE rating BETWEEN 1 AND 5 GROUP BY rating ORDER BY rating ASC`,
     ),
-    getDatabasePool().execute(
-      `SELECT feedback_type AS feedbackType, COUNT(*) AS count FROM feedback
+    getDatabasePool().query(
+      `SELECT feedback_type AS "feedbackType", COUNT(*) AS count FROM feedback
        WHERE feedback_type IN (${typePlaceholders})
        GROUP BY feedback_type ORDER BY feedback_type ASC`,
       FEEDBACK_TYPES,
     ),
   ]);
 
-  const volumeByDay = new Map(volumeRows[0].map((row) => [
+  const volumeByDay = new Map(volumeResult.rows.map((row) => [
     typeof row.day === 'string' ? row.day.slice(0, 10) : sqlDate(row.day),
     Number(row.count),
   ]));
@@ -85,12 +85,12 @@ export async function getDashboardCharts(now = new Date()) {
     feedbackVolume.push({ date, count: volumeByDay.get(date) ?? 0 });
   }
 
-  const ratingCounts = new Map(ratingRows[0].map((row) => [Number(row.rating), Number(row.count)]));
+  const ratingCounts = new Map(ratingResult.rows.map((row) => [Number(row.rating), Number(row.count)]));
   const ratingDistribution = [1, 2, 3, 4, 5].map((rating) => ({
     rating,
     count: ratingCounts.get(rating) ?? 0,
   }));
-  const typeCounts = new Map(typeRows[0].map((row) => [row.feedbackType, Number(row.count)]));
+  const typeCounts = new Map(typeResult.rows.map((row) => [row.feedbackType, Number(row.count)]));
   const feedbackTypeDistribution = FEEDBACK_TYPES.map((feedbackType) => ({
     feedbackType,
     count: typeCounts.get(feedbackType) ?? 0,
