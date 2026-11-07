@@ -60,6 +60,7 @@ function VolumeChart({ items = [], loading }) {
   const total = useMemo(() => (items || []).reduce((sum, item) => sum + item.count, 0), [items]);
   const peak = useMemo(() => (items || []).reduce((best, item) => item.count > (best?.count ?? -1) ? item : best, null), [items]);
   const maximum = Math.max(1, ...(items || []).map((item) => item.count));
+  const submittedDates = useMemo(() => (items || []).filter((item) => item.count > 0), [items]);
   return (
     <section className="chart-card volume-chart" aria-labelledby="volume-chart-title">
       <div className="chart-title-row">
@@ -88,7 +89,7 @@ function VolumeChart({ items = [], loading }) {
             <summary>View daily counts as a table</summary>
             <div className="volume-table-wrap">
               <table><thead><tr><th scope="col">UTC date</th><th scope="col">Submissions</th></tr></thead>
-                <tbody>{items.map((item) => <tr key={item.date}><td>{item.date}</td><td>{formatCount(item.count)}</td></tr>)}</tbody>
+                <tbody>{submittedDates.length > 0 ? submittedDates.map((item) => <tr key={item.date}><td>{item.date}</td><td>{formatCount(item.count)}</td></tr>) : <tr><td colSpan="2">No submissions in this period.</td></tr>}</tbody>
               </table>
             </div>
           </details>
@@ -358,7 +359,6 @@ export default function AdminDashboard({ admin, onSessionExpired }) {
             <div className="section-tools">
               {pagination && <span className="record-count">{formatCount(pagination.totalRecords)} {pagination.totalRecords === 1 ? 'record' : 'records'}</span>}
               <button className="export-button" type="button" onClick={exportCsv} disabled={exportBusy} title="Download all matching records, not only this page">
-                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 13v3a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 {exportBusy ? 'Preparing…' : 'Export CSV'}
               </button>
             </div>

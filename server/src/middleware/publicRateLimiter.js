@@ -34,16 +34,6 @@ export function createIpRateLimiter({ message, maxRequests = MAX_REQUESTS, windo
   };
 }
 
-function removeExpiredEntries() {
-  const now = Date.now();
-  for (const [ip, entry] of requestsByIp) {
-    if (entry.resetAt <= now) requestsByIp.delete(ip);
-  }
-}
-
-const cleanupTimer = setInterval(removeExpiredEntries, WINDOW_MS);
-cleanupTimer.unref();
-
 /**
  * Limit public feedback attempts to five per IP in each 15-minute window.
  *

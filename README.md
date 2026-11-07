@@ -151,6 +151,11 @@ to the selected type and rating, and requires a Turnstile token. Suggestions
 filter locally as the visitor types and remain editable. Its client validation checks can be run with
 `npm run test:form --workspace client`.
 
+The public page includes a live, read-only preview of the selected feedback
+type, rating, and message. At desktop widths (1,201 CSS pixels and above), the
+footer is hidden so the centered form layout has more room; it remains visible
+on narrower screens, where the page scrolls naturally as needed.
+
 The Vite client runs at `http://localhost:5173` and proxies `/api` to the
 Express server at `http://localhost:3000`. The backend validates `DATABASE_URL`
 and checks PostgreSQL connectivity on startup. If it exits with a database

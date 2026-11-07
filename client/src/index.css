@@ -341,7 +341,7 @@ h2 { color: var(--brand-text); font-size: 30px; font-weight: 600; letter-spacing
 }
 
 /* Keep verification and submission together and reduce avoidable desktop form height. */
-.page-shell { display: flex; flex-direction: column; min-height: 100vh; min-height: 100svh; }
+.page-shell { display: flex; flex-direction: column; height: 100vh; height: 100svh; overflow: hidden; }
 .site-header, .site-footer { flex-shrink: 0; }
 .main-layout { margin-block: auto; padding-block: clamp(14px, 2vh, 20px); }
 .form-card { padding: 23px 30px 18px; }
@@ -361,4 +361,13 @@ h2 { color: var(--brand-text); font-size: 30px; font-weight: 600; letter-spacing
 @media (max-width: 1200px) {
   .verification-submit-row { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .verification-submit-row .submit-button { width: 100%; }
+}
+
+@media (min-width: 1201px) {
+  .site-footer { display: none; }
+}
+
+/* Keep the fixed public page comfortable on shorter desktop viewports. */
+@media (min-width: 561px) {
+  .page-shell { zoom: .9; height: 111.111svh; }
 }
