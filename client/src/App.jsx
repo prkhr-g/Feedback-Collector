@@ -236,22 +236,32 @@ function PublicFeedbackPage() {
             worked, what could improve, or what you would like to see next.
           </p>
 
-          <div className="process-card">
-            <div className="process-heading">
-              <span className="process-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v6a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4.2A2.5 2.5 0 0 1 5 12.5v-6Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /><path d="M9 9h6M9 12h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
-              </span>
+          <section className="feedback-preview" aria-labelledby="preview-title">
+            <div className="preview-header">
               <div>
-                <p className="process-title">A few thoughtful details</p>
-                <p className="process-subtitle">Your input helps guide what we improve.</p>
+                <h2 className="preview-title" id="preview-title">Your feedback preview</h2>
+                <span className="preview-type">{form.feedbackType || 'Feedback type'}</span>
               </div>
+              <span className="preview-live"><span className="preview-live-dot" /> Live preview</span>
             </div>
-            <ol className="process-list">
-              <li><span>01</span><div><strong>Choose a rating</strong><small>Share how the experience felt.</small></div></li>
-              <li><span>02</span><div><strong>Add the context</strong><small>A specific example is always helpful.</small></div></li>
-              <li><span>03</span><div><strong>Send it our way</strong><small>We’ll use it to make informed improvements.</small></div></li>
-            </ol>
-          </div>
+            <div className="preview-rating" aria-label={form.rating ? `Rating ${form.rating} out of 5, ${RATING_OPTIONS.find(({ value }) => value === form.rating)?.label}` : 'No rating selected'}>
+              {form.rating ? (
+                <>
+                  <span className="preview-face"><FaceIcon rating={form.rating} selected /></span>
+                  <span className="preview-rating-copy">
+                    <strong>{RATING_OPTIONS.find(({ value }) => value === form.rating)?.label}</strong>
+                    <small>{form.rating} out of 5</small>
+                  </span>
+                  <span className="preview-stars" aria-hidden="true">
+                    {RATING_OPTIONS.map(({ value }) => <span className={value <= form.rating ? 'preview-star-active' : ''} key={value}>&#9733;</span>)}
+                  </span>
+                </>
+              ) : <span className="preview-rating-empty">No rating selected yet</span>}
+            </div>
+            <p className={`preview-message ${form.message.trim() ? '' : 'preview-message-placeholder'}`}>
+              {form.message.trim() ? form.message : 'Your message will appear here as you write.'}
+            </p>
+          </section>
 
           <p className="privacy-note">
             <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5 16 5v4.2c0 3.8-2.5 6.6-6 8.3-3.5-1.7-6-4.5-6-8.3V5l6-2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /><path d="m7.5 9.8 1.7 1.7 3.4-3.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -261,10 +271,7 @@ function PublicFeedbackPage() {
 
         <section className="form-card" aria-labelledby="form-title">
           <div className="form-card-heading">
-            <div>
-              <p className="form-kicker">FEEDBACK FORM</p>
-              <h2 id="form-title">Tell us about it</h2>
-            </div>
+            <p className="form-kicker" id="form-title">FEEDBACK FORM</p>
             <span className="required-note"><b>*</b> Required</span>
           </div>
 
