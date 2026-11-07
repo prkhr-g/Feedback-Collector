@@ -32,7 +32,7 @@ console.log('PASS: required fields, lengths, allowlists, rating bounds, and cont
 for (const type of FEEDBACK_TYPES) {
   for (const { value: rating } of RATING_OPTIONS) {
     const suggestions = getFeedbackSuggestions(type, rating);
-    assert.equal(suggestions.length, 2, `${type} · rating ${rating} has two suggestions`);
+    assert.equal(suggestions.length, 3, `${type} · rating ${rating} has exactly three suggestions`);
     assert.ok(suggestions.every((suggestion) => suggestion.trim().length > 20));
     assert.ok(suggestions.every((suggestion) => !suggestion.includes('?')), `${type} · rating ${rating} contains statements, not questions`);
   }
@@ -49,7 +49,7 @@ console.log('PASS: all 30 feedback type/rating combinations have context-specifi
 
 assert.ok(getFeedbackSuggestions('General feedback', 5, 'EXCELLENT').every((suggestion) => suggestion.toLowerCase().includes('excellent')));
 assert.equal(getFeedbackSuggestions('Bug report', 1, 'nothing matches this custom text').length, 0);
-assert.equal(getFeedbackSuggestions('Complaint', 0).length, 10, 'no selected rating shows suggestions across ratings for the selected type');
+assert.equal(getFeedbackSuggestions('Complaint', 0).length, 15, 'no selected rating shows three suggestions for each rating of the selected type');
 console.log('PASS: suggestion filtering is case-insensitive, custom input can have no matches, and empty input returns relevant defaults');
 
 assert.deepEqual(getSuggestionKeyAction('ArrowDown', -1, 3), { type: 'move', index: 0 });

@@ -55,6 +55,7 @@ function PublicFeedbackPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [captchaCycle, setCaptchaCycle] = useState(0);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [successOpen, setSuccessOpen] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const suppressSuggestionFocusRef = useRef(false);
   const messageFieldRef = useRef(null);
@@ -64,10 +65,27 @@ function PublicFeedbackPage() {
   const typeRef = useRef(null);
   const ratingRef = useRef(null);
   const errorSummaryRef = useRef(null);
+  const successDialogRef = useRef(null);
+  const submissionLockRef = useRef(false);
   const suggestions = useMemo(
     () => getFeedbackSuggestions(form.feedbackType, form.rating, form.message),
     [form.feedbackType, form.rating, form.message],
   );
+
+  useEffect(() => {
+    if (successOpen && successDialogRef.current && !successDialogRef.current.open) {
+      successDialogRef.current.showModal();
+    }
+  }, [successOpen]);
+
+  function handleSuccessClose() {
+    setSuccessOpen(false);
+    setForm(EMPTY_FORM);
+    setFieldErrors({});
+    setTurnstileToken('');
+    setNotice(null);
+    submissionLockRef.current = false;
+  }
 
   useEffect(() => {
     if (!suggestionsOpen) return undefined;
@@ -130,7 +148,7 @@ function PublicFeedbackPage() {
     event.preventDefault();
     setSuggestionsOpen(false);
     setActiveSuggestionIndex(-1);
-    if (isSubmitting) return;
+    if (submissionLockRef.current || isSubmitting || successOpen) return;
 
     const errors = validateFeedbackForm(form, turnstileToken);
     setFieldErrors(errors);
@@ -148,7 +166,9 @@ function PublicFeedbackPage() {
       return;
     }
 
+    submissionLockRef.current = true;
     setIsSubmitting(true);
+    let submissionSucceeded = false;
     try {
       const response = await fetch('/api/feedback', {
         method: 'POST',
@@ -162,7 +182,7 @@ function PublicFeedbackPage() {
         }),
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
+      if (!response.ok || result.success !== true) {
         if (result.errors && typeof result.errors === 'object') {
           setFieldErrors({
             ...result.errors,
@@ -178,17 +198,19 @@ function PublicFeedbackPage() {
         return;
       }
 
-      setForm(EMPTY_FORM);
       setFieldErrors({});
       setTurnstileToken('');
       setCaptchaCycle((cycle) => cycle + 1);
-      setNotice({ type: 'success', message: 'Thank you. Your feedback has been received.' });
+      setNotice(null);
+      submissionSucceeded = true;
+      setSuccessOpen(true);
     } catch {
       setNotice({ type: 'error', message: 'We could not reach the server. Check your connection and try again.' });
       setTurnstileToken('');
       setCaptchaCycle((cycle) => cycle + 1);
     } finally {
       setIsSubmitting(false);
+      if (!submissionSucceeded) submissionLockRef.current = false;
     }
   }
 
@@ -199,7 +221,10 @@ function PublicFeedbackPage() {
           <span className="brand-mark" aria-hidden="true"><i /><i /><i /><i /></span>
           <span className="brand-lockup"><strong>Penthara Technologies</strong><small>FEEDBACK PORTAL</small></span>
         </a>
-        <span className="header-note"><span className="header-dot" /> Open feedback</span>
+        <div className="header-actions">
+          <span className="header-note"><span className="header-dot" /> Open feedback</span>
+          <a className="admin-signin-link" href="/admin">Admin sign in</a>
+        </div>
       </header>
 
       <main id="top" className="main-layout">
@@ -237,7 +262,7 @@ function PublicFeedbackPage() {
         <section className="form-card" aria-labelledby="form-title">
           <div className="form-card-heading">
             <div>
-              <p className="form-kicker">FEEDBACK FORM <span>·</span> 2 MIN</p>
+              <p className="form-kicker">FEEDBACK FORM</p>
               <h2 id="form-title">Tell us about it</h2>
             </div>
             <span className="required-note"><b>*</b> Required</span>
@@ -361,6 +386,31 @@ function PublicFeedbackPage() {
                   <label htmlFor="message">Your message <span>*</span></label>
                   <span className="suggestion-label">Optional suggestions</span>
                 </div>
+                {suggestionsOpen && (
+                  <div className="suggestion-panel">
+                    <div className="suggestion-panel-heading">
+                      <span>Suggestions</span>
+                      <span>{form.feedbackType} · {form.rating ? RATING_OPTIONS.find(({ value }) => value === form.rating)?.label : 'all ratings'}</span>
+                    </div>
+                    <ul id="message-suggestions" className="suggestion-list" role="listbox" aria-label="Prewritten feedback suggestions">
+                      {suggestions.length > 0 ? suggestions.map((suggestion, index) => (
+                        <li
+                          id={`message-suggestion-${index}`}
+                          className={`suggestion-option ${activeSuggestionIndex === index ? 'suggestion-option-active' : ''}`}
+                          key={suggestion}
+                          role="option"
+                          aria-selected={activeSuggestionIndex === index}
+                          onPointerDown={(event) => event.preventDefault()}
+                          onClick={() => chooseSuggestion(suggestion)}
+                        >
+                          {suggestion}
+                        </li>
+                      )) : (
+                        <li className="suggestion-empty" role="option" aria-disabled="true">No matching suggestions. You can keep writing your own feedback.</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
                 <textarea
                   ref={messageRef}
                   id="message"
@@ -387,31 +437,6 @@ function PublicFeedbackPage() {
                   aria-invalid={Boolean(fieldErrors.message)}
                   aria-describedby={fieldErrors.message ? 'message-hint message-error' : 'message-hint'}
                 />
-                {suggestionsOpen && (
-                  <div className="suggestion-panel">
-                    <div className="suggestion-panel-heading">
-                      <span>Suggestions</span>
-                      <span>{form.feedbackType} · {form.rating ? RATING_OPTIONS.find(({ value }) => value === form.rating)?.label : 'all ratings'}</span>
-                    </div>
-                    <ul id="message-suggestions" className="suggestion-list" role="listbox" aria-label="Prewritten feedback suggestions">
-                      {suggestions.length > 0 ? suggestions.map((suggestion, index) => (
-                          <li
-                            id={`message-suggestion-${index}`}
-                            className={`suggestion-option ${activeSuggestionIndex === index ? 'suggestion-option-active' : ''}`}
-                            key={suggestion}
-                            role="option"
-                            aria-selected={activeSuggestionIndex === index}
-                            onPointerDown={(event) => event.preventDefault()}
-                            onClick={() => chooseSuggestion(suggestion)}
-                          >
-                            {suggestion}
-                          </li>
-                        )) : (
-                          <li className="suggestion-empty" role="option" aria-disabled="true">No matching suggestions. You can keep writing your own feedback.</li>
-                        )}
-                    </ul>
-                  </div>
-                )}
                 <div className="message-footer">
                   <span id="message-hint" className="field-hint">Suggestions are optional; your message stays editable.</span>
                   <span className="character-count" aria-live="polite">{Array.from(form.message).length}/1,000</span>
@@ -419,27 +444,25 @@ function PublicFeedbackPage() {
                 <FieldError id="message-error">{fieldErrors.message}</FieldError>
               </div>
 
-              <div className="captcha-section">
-                <p id="captcha-label" className="captcha-label">Quick verification <span>*</span></p>
-                <TurnstileWidget
-                  key={captchaCycle}
-                  siteKey={SITE_KEY}
-                  onToken={handleTurnstileToken}
-                  error={fieldErrors.turnstileToken}
-                />
+              <div className="verification-submit-row">
+                <div className="captcha-section">
+                  <p id="captcha-label" className="captcha-label">Quick verification <span>*</span></p>
+                  <TurnstileWidget
+                    key={captchaCycle}
+                    siteKey={SITE_KEY}
+                    onToken={handleTurnstileToken}
+                    error={fieldErrors.turnstileToken}
+                  />
+                </div>
+                <button className="submit-button" type="submit" disabled={isSubmitting || successOpen}>
+                  {isSubmitting ? (
+                    <><span className="button-spinner" aria-hidden="true" /> Sending...</>
+                  ) : (
+                    <>Send feedback <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 10h13m0 0L11 4.5M16.5 10 11 15.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg></>
+                  )}
+                </button>
               </div>
             </fieldset>
-
-            <div className="submit-row">
-              <p className="submit-note">Fields marked <span>*</span> are required.</p>
-              <button className="submit-button" type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <><span className="button-spinner" aria-hidden="true" /> Sending...</>
-                ) : (
-                  <>Send feedback <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 10h13m0 0L11 4.5M16.5 10 11 15.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg></>
-                )}
-              </button>
-            </div>
           </form>
         </section>
       </main>
@@ -447,8 +470,22 @@ function PublicFeedbackPage() {
       <footer className="site-footer">
         <span>Penthara Technologies · Feedback Portal</span>
         <span>Thoughtful feedback makes a difference.</span>
-        <a href="/admin">Administrator sign in</a>
       </footer>
+
+      <dialog
+        ref={successDialogRef}
+        className="success-dialog"
+        aria-labelledby="success-title"
+        aria-describedby="success-message"
+        onClose={handleSuccessClose}
+      >
+        <div className="success-mark" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none"><circle className="success-mark-circle" cx="32" cy="32" r="27" /><path className="success-mark-check" d="m19 33 9 9 18-20" /></svg>
+        </div>
+        <h2 id="success-title">Thank you for your feedback!</h2>
+        <p id="success-message">Your feedback has been submitted successfully.</p>
+        <button className="success-done-button" type="button" onClick={() => successDialogRef.current?.close()}>Done</button>
+      </dialog>
     </div>
   );
 }

@@ -299,3 +299,69 @@ h2 { color: var(--brand-text); font-size: 30px; font-weight: 600; letter-spacing
   .field-group input, .field-group textarea, .field-group select { font-size: 16px; }
   .suggestion-list { max-height: 156px; }
 }
+
+/* Keep the public form compact after the shared brand rules above. */
+.site-header { height: 66px; }
+.main-layout { padding-block: 28px 52px; gap: clamp(36px, 5vw, 68px); }
+.intro-column { padding-top: 10px; }
+.header-actions { display: flex; align-items: center; gap: 24px; }
+.admin-signin-link { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; padding: 0 15px; border: 1px solid var(--brand-border); border-radius: 7px; color: var(--brand-purple); background: var(--brand-surface); font-size: 13px; font-weight: 500; text-decoration: none; }
+.admin-signin-link:hover { border-color: #C8B6E0; background: var(--brand-purple-soft); color: #421B8A; }
+.admin-signin-link:focus-visible { outline: 3px solid var(--brand-focus); outline-offset: 2px; }
+.message-field .suggestion-panel { margin: 0 0 9px; }
+.success-dialog { width: min(440px, calc(100vw - 36px)); padding: 34px 30px 28px; border: 1px solid var(--brand-border); border-radius: 16px; color: var(--brand-text); background: var(--brand-surface); box-shadow: 0 24px 80px rgba(33, 23, 45, .22); text-align: center; }
+.success-dialog::backdrop { background: rgba(33, 23, 45, .48); backdrop-filter: blur(2px); }
+.success-dialog[open] { animation: success-dialog-in .24s ease-out both; }
+.success-mark { width: 76px; height: 76px; display: grid; place-items: center; margin: 0 auto 18px; border-radius: 50%; background: var(--brand-purple-soft); }
+.success-mark svg { width: 60px; height: 60px; overflow: visible; }
+.success-mark-circle { stroke: var(--brand-magenta); stroke-width: 2.5; stroke-dasharray: 170; stroke-dashoffset: 170; animation: success-circle-draw .5s ease-out .08s forwards; }
+.success-mark-check { stroke: var(--brand-purple); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 42; stroke-dashoffset: 42; animation: success-check-draw .32s ease-out .42s forwards; }
+.success-dialog h2 { margin: 0 0 9px; font-size: 23px; letter-spacing: -.02em; }
+.success-dialog > p { margin: 0 0 23px; color: var(--brand-muted); font-size: 15px; line-height: 1.6; }
+.success-done-button { min-width: 120px; min-height: 44px; padding: 0 22px; border: 0; border-radius: 7px; color: white; background: var(--brand-purple); font-size: 14px; font-weight: 600; }
+.success-done-button:hover { background: #421B8A; }
+.success-done-button:focus-visible { outline: 3px solid var(--brand-focus); outline-offset: 3px; }
+@keyframes success-dialog-in { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes success-circle-draw { to { stroke-dashoffset: 0; } }
+@keyframes success-check-draw { to { stroke-dashoffset: 0; } }
+
+@media (max-width: 900px) {
+  .site-header { height: 62px; }
+  .main-layout { padding-top: 24px; gap: 28px; }
+}
+
+@media (max-width: 560px) {
+  .site-header { height: 58px; }
+  .header-actions { gap: 0; }
+  .header-note { display: none; }
+  .admin-signin-link { min-height: 38px; padding-inline: 11px; font-size: 12px; }
+  .main-layout { gap: 25px; padding-top: 14px; }
+  .form-card { order: 1; }
+  .intro-column { order: 2; }
+  .success-dialog { padding: 28px 21px 23px; }
+  .success-dialog h2 { font-size: 21px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .success-dialog[open], .success-mark-circle, .success-mark-check { animation: none; }
+  .success-mark-circle, .success-mark-check { stroke-dashoffset: 0; }
+}
+
+/* Keep verification and submission together and reduce avoidable desktop form height. */
+.main-layout { padding-top: 14px; }
+.form-card { padding: 23px 30px 18px; }
+.form-card-heading { margin-bottom: 16px; }
+.form-card .field-group { margin-bottom: 10px; }
+.form-card .message-field { margin-bottom: 11px; }
+.form-card .rating-fieldset { margin-bottom: 11px; }
+.form-card .field-group textarea { min-height: 104px; }
+.form-card .rating-visual { height: 49px; }
+.verification-submit-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.verification-submit-row .captcha-section { min-width: 0; flex: 1 1 auto; margin: 0; }
+.verification-submit-row .submit-button { flex: 0 0 auto; white-space: nowrap; }
+.site-footer { padding-block: 12px 16px; }
+
+@media (max-width: 640px) {
+  .verification-submit-row { align-items: stretch; flex-direction: column; gap: 12px; }
+  .verification-submit-row .submit-button { width: 100%; }
+}
