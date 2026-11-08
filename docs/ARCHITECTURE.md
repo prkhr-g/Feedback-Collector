@@ -45,5 +45,7 @@ apply validated keyword/date/type/rating filters in parameterized PostgreSQL
 queries, count before server-side pagination, select sort clauses from a fixed
 allowlist, and require same-origin protection for deletion. Dashboard queries
 use UTC day boundaries and return bounded datasets: 30 daily counts, five
-ratings, and six feedback types. CSV export reuses those filters, caps
-retrieval at 10,001 rows, quotes cells, and neutralizes spreadsheet formulas.
+ratings, and six feedback types. CSV and XLSX exports reuse those filters and
+sorting without list pagination; CSV quotes cells and neutralizes spreadsheet
+formulas, while XLSX provides styled headers, column widths, and a frozen
+header row.

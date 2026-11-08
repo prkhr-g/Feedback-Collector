@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FEEDBACK_TYPES, RATING_OPTIONS } from '../../utils/feedbackForm.js';
 import {
   adminApi, createFeedbackQuery, downloadFeedbackCsv, downloadFeedbackXlsx, formatFeedbackDate, AdminApiError,
@@ -58,10 +58,10 @@ function DistributionList({ title, subtitle, items = [], labelKey, tone, loading
 }
 
 function VolumeChart({ items = [], loading }) {
-  const total = useMemo(() => (items || []).reduce((sum, item) => sum + item.count, 0), [items]);
-  const peak = useMemo(() => (items || []).reduce((best, item) => item.count > (best?.count ?? -1) ? item : best, null), [items]);
+  const total = (items || []).reduce((sum, item) => sum + item.count, 0);
+  const peak = (items || []).reduce((best, item) => item.count > (best?.count ?? -1) ? item : best, null);
   const maximum = Math.max(1, ...(items || []).map((item) => item.count));
-  const submittedDates = useMemo(() => (items || []).filter((item) => item.count > 0), [items]);
+  const submittedDates = (items || []).filter((item) => item.count > 0);
   return (
     <section className="chart-card volume-chart" aria-labelledby="volume-chart-title">
       <div className="chart-title-row">
@@ -312,10 +312,8 @@ export default function AdminDashboard({ admin, onSessionExpired }) {
     }
   }
 
-  const activeFilterCount = useMemo(
-    () => ['keyword', 'startDate', 'endDate', 'feedbackType', 'rating'].filter((key) => appliedFilters[key]).length,
-    [appliedFilters],
-  );
+  const activeFilterCount = ['keyword', 'startDate', 'endDate', 'feedbackType', 'rating']
+    .filter((key) => appliedFilters[key]).length;
   const feedbackRows = listResult?.data || [];
   const pagination = listResult?.pagination;
 

@@ -41,9 +41,9 @@ Sign in at `/admin`. Show the total, today, and current-week statistics, then th
 
 ### 5. Export and deletion — 40 seconds
 
-Export the filtered list. Open the downloaded CSV and point out the numeric rating, rating label, and UTC timestamp. Then select the disposable demo record, show that the confirmation names the record, and confirm deletion.
+Export the filtered list as CSV or XLSX. Open the downloaded file and point out the numeric rating, rating label, and UTC timestamp. Then select the disposable demo record, show that the confirmation names the record, and confirm deletion.
 
-“CSV export includes every record matching the filters, regardless of the visible page. It is capped at 10,000 rows, quotes commas/quotes/newlines, and neutralizes spreadsheet formulas. Delete uses a parameterized query and requires same-origin protection.”
+“Both export formats include every record matching the filters, regardless of the visible page. CSV quotes commas, quotes, and newlines and neutralizes spreadsheet formulas; XLSX uses styled headers, readable widths, and a frozen header row. Delete uses a parameterized query and requires same-origin protection.”
 
 ### 6. Code organization and safeguards — 45 seconds
 
@@ -62,7 +62,7 @@ Export the filtered list. Open the downloaded CSV and point out the numeric rati
 - The local MySQL database remains intact as a fallback; the approved one-time migration to Neon was verified and did not modify the source.
 - Real browser Siteverify requires internet access. Automated public API tests use a deterministic Siteverify stub.
 - The rate limiter is in-memory, so it resets when the server restarts and is intended for one application instance.
-- CSV export is limited to 10,000 matching records. Admin password reset and public admin registration are not implemented.
+- Exports retrieve all matching records. Admin password reset and public admin registration are not implemented.
 - A future hosted demo, persistent rate limiting, or account recovery flow would need separate scope and approval.
 
 ## Verified checks to cite

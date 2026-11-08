@@ -117,7 +117,6 @@ function PublicFeedbackPage() {
 
   function handleRatingChange(event) {
     updateField(event);
-    setFieldErrors((current) => ({ ...current, rating: undefined }));
   }
 
   function chooseSuggestion(suggestion) {
@@ -452,23 +451,25 @@ function PublicFeedbackPage() {
                 <FieldError id="message-error">{fieldErrors.message}</FieldError>
               </div>
 
-              <div className="verification-submit-row">
-                <div className="captcha-section">
-                  <p id="captcha-label" className="captcha-label">Quick verification <span>*</span></p>
+              <div className="verification-submit-group">
+                <p id="captcha-label" className="captcha-label">Quick verification <span>*</span></p>
+                <div className="verification-submit-row">
+                  <div className="captcha-section">
                   <TurnstileWidget
                     key={captchaCycle}
                     siteKey={SITE_KEY}
                     onToken={handleTurnstileToken}
                     error={fieldErrors.turnstileToken}
                   />
+                  </div>
+                  <button className="submit-button" type="submit" disabled={isSubmitting || successOpen}>
+                    {isSubmitting ? (
+                      <><span className="button-spinner" aria-hidden="true" /> Sending...</>
+                    ) : (
+                      <>Send feedback <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 10h13m0 0L11 4.5M16.5 10 11 15.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg></>
+                    )}
+                  </button>
                 </div>
-                <button className="submit-button" type="submit" disabled={isSubmitting || successOpen}>
-                  {isSubmitting ? (
-                    <><span className="button-spinner" aria-hidden="true" /> Sending...</>
-                  ) : (
-                    <>Send feedback <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 10h13m0 0L11 4.5M16.5 10 11 15.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg></>
-                  )}
-                </button>
               </div>
             </fieldset>
           </form>

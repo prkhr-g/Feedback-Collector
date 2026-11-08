@@ -54,18 +54,19 @@ export async function getDashboardStats(now = new Date()) {
 export async function getDashboardCharts(now = new Date()) {
   const range = getDashboardBoundaries(now);
   const typePlaceholders = FEEDBACK_TYPES.map((_, index) => `$${index + 1}`).join(', ');
+  const pool = getDatabasePool();
   const [volumeResult, ratingResult, typeResult] = await Promise.all([
-    getDatabasePool().query(
+    pool.query(
       `SELECT to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, COUNT(*) AS count
        FROM feedback WHERE created_at >= $1::timestamptz AND created_at < $2::timestamptz
        GROUP BY day ORDER BY day ASC`,
       [`${range.chartStart}T00:00:00.000Z`, `${range.chartEnd}T00:00:00.000Z`],
     ),
-    getDatabasePool().query(
+    pool.query(
       `SELECT rating, COUNT(*) AS count FROM feedback
        WHERE rating BETWEEN 1 AND 5 GROUP BY rating ORDER BY rating ASC`,
     ),
-    getDatabasePool().query(
+    pool.query(
       `SELECT feedback_type AS "feedbackType", COUNT(*) AS count FROM feedback
        WHERE feedback_type IN (${typePlaceholders})
        GROUP BY feedback_type ORDER BY feedback_type ASC`,

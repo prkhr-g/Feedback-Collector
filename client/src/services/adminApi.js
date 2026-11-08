@@ -47,6 +47,13 @@ export function createExportQuery(filters) {
   return params.toString();
 }
 
+function getDownloadDate() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}${month}${day}`;
+}
+
 /** Download a protected export file from the same-origin API. */
 export async function downloadFeedbackExport(filters, format = 'csv') {
   let response;
@@ -63,9 +70,7 @@ export async function downloadFeedbackExport(filters, format = 'csv') {
   }
 
   const expectedExtension = format === 'xlsx' ? 'xlsx' : 'csv';
-  const filename = new RegExp(`filename="(feedback-export-\\d{8}\\.${expectedExtension})"`, 'iu')
-    .exec(response.headers.get('Content-Disposition') || '')?.[1]
-    || `feedback-export.${expectedExtension}`;
+  const filename = `feedback-export-${getDownloadDate()}.${expectedExtension}`;
   const objectUrl = URL.createObjectURL(await response.blob());
   const link = document.createElement('a');
   link.href = objectUrl;

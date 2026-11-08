@@ -48,3 +48,16 @@ with exact Origin checks for state-changing requests. Passwords use bcrypt
 with 12 rounds. Existing scrypt password hashes from the earlier Phase 4
 implementation are verified during login and upgraded to bcrypt after
 successful authentication.
+
+## XLSX export dependency risk
+
+ExcelJS 4.4.0 is retained for the protected XLSX export implementation. Its
+transitive `uuid@8.3.2` dependency is affected by advisory
+GHSA-w5hq-g745-h8pq (moderate severity), concerning UUID v3/v5/v6 buffer
+bounds handling. Those affected code paths do not appear reachable through the
+application's current ExcelJS usage, which generates workbooks and relies on
+UUID v4 identifiers internally.
+
+Downgrading ExcelJS or forcing a UUID override was rejected because of
+compatibility and regression risks. This is an accepted, documented
+dependency risk and must be reassessed before production deployment.

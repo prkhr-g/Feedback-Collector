@@ -5,7 +5,7 @@ selection assignment. The project is being built in approved phases. The
 current implementation includes a React/Vite client, an Express API, Neon
 PostgreSQL integration, the public feedback form and submission API, existing
 application-level admin authentication, feedback management, dashboard data
-APIs, and filtered CSV export. The approved one-time migration of local
+APIs, and filtered CSV/XLSX export. The approved one-time migration of local
 MySQL data to Neon has been completed and verified. Public deployment remains
 a separate phase.
 
@@ -257,9 +257,9 @@ npm run api:e2e-test --workspace server
    local Turnstile test key. Real Siteverify checks require internet access.
 5. Sign in at `http://localhost:5173/admin` with the initialized admin. Show
    the dashboard, feedback list, combined filters, sorting, and pagination.
-6. Export the filtered rows to CSV and confirm its numeric rating, label, and
-   UTC timestamp. Delete only the disposable entry after confirming the
-   dialog.
+6. Export the filtered rows to CSV or XLSX and confirm the numeric rating,
+   label, and UTC timestamp. Delete only the disposable entry after confirming
+   the dialog.
 7. Run the database, API, end-to-end, client structure, and production build
    checks listed above before handing off the repository.
 
