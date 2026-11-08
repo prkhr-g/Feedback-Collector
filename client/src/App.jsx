@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TurnstileWidget from './components/TurnstileWidget.jsx';
 import AdminApp from './components/admin/AdminApp.jsx';
+import pentharaLogo from './assets/penthara-logo.png';
 import {
   FEEDBACK_TYPES,
   getFeedbackSuggestions,
@@ -218,7 +219,7 @@ function PublicFeedbackPage() {
     <div className="page-shell">
       <header className="site-header">
         <a className="brand" href="#top" aria-label="Penthara Technologies feedback portal home">
-          <span className="brand-mark" aria-hidden="true"><i /><i /><i /><i /></span>
+          <img className="brand-mark" src={pentharaLogo} alt="" aria-hidden="true" />
           <span className="brand-lockup"><strong>Penthara Technologies</strong><small>FEEDBACK PORTAL</small></span>
         </a>
         <div className="header-actions">

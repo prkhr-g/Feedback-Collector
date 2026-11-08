@@ -3,6 +3,7 @@ import { FEEDBACK_TYPES, RATING_OPTIONS } from '../../utils/feedbackForm.js';
 import {
   adminApi, createFeedbackQuery, downloadFeedbackCsv, downloadFeedbackXlsx, formatFeedbackDate, AdminApiError,
 } from '../../services/adminApi.js';
+import pentharaLogo from '../../assets/penthara-logo.png';
 import './admin.css';
 
 const EMPTY_FILTERS = {
@@ -322,7 +323,7 @@ export default function AdminDashboard({ admin, onSessionExpired }) {
     <div className="admin-shell">
       <header className="admin-header">
         <a className="admin-brand" href="/admin" aria-label="Penthara Technologies feedback dashboard">
-          <span className="admin-brand-mark" aria-hidden="true"><i /><i /><i /><i /></span>
+          <img className="admin-brand-mark" src={pentharaLogo} alt="" aria-hidden="true" />
           <span className="admin-brand-lockup"><strong>Penthara Technologies</strong><small>FEEDBACK ADMIN</small></span>
         </a>
         <div className="admin-header-actions">
