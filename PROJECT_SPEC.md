@@ -162,13 +162,15 @@ Message: - Required, trim outer whitespace, recommended maximum 1,000
 characters. - Preserve normal punctuation and Unicode. - Never render as
 raw HTML. - Optional character counter.
 
-Suggested/prewritten prompts: - Deterministic prompts based on feedback
-type and rating. - Examples: bug report/low rating: "What went wrong?
-What did you expect?"; feature request: "What would you like to be able
-to do?"; appreciation/high rating: "What worked particularly well?";
-general: "What could we improve?" - Suggestions are editable starter
-text, never auto-submitted. - No LLM or paid external generation
-service.
+Prewritten feedback suggestions: - Show optional, editable feedback
+statements selected by feedback type and rating when the message textarea
+receives focus. - Filter the local suggestions as the user types; selecting
+one inserts editable text. - Allow fully custom feedback without choosing a
+suggestion. - Support pointer and practical keyboard navigation, and close the
+list on outside click, Escape, or form submission. - Suggestions are natural
+feedback content, not questions, AI-generated prompts, or chatbot responses.
+- Keep statements in a maintainable local data file; do not use an AI API or
+paid external generation service.
 
 Submission: - Client validation for usability and server validation for
 security. - Server verifies Turnstile token with Cloudflare Siteverify;
@@ -412,7 +414,8 @@ Component responsibilities: - `FeedbackForm`: form values, validation
 display, submission state; delegates type/rating/CAPTCHA controls. -
 `FeedbackTypeSelect`: allowed types. - `FaceRating`: accessible
 one-of-five rating, returns numeric value. - `SuggestedMessage`:
-deterministic editable prompts based on type/rating. -
+context-aware editable feedback statements based on type/rating, filtered
+locally as the visitor types. -
 `TurnstileWidget`: render widget and provide token; reset when needed. -
 `FeedbackList`: current page list and list states. - `FeedbackItem`: one
 feedback record and delete action. - `FilterBar`:

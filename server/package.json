@@ -6,11 +6,29 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "db:smoke": "node scripts/database-smoke-test.js"
+    "db:init": "node scripts/initialize-database.js",
+    "db:migrate:mysql": "node scripts/migrate-mysql-to-neon.js",
+    "db:migration-test": "node scripts/migration-plan-test.js",
+    "db:smoke": "node scripts/database-smoke-test.js",
+    "db:integration": "node scripts/database-integration-test.js",
+    "db:config-test": "node scripts/database-config-test.js",
+    "api:public-test": "node scripts/public-feedback-test.js",
+    "admin:init": "node scripts/initialize-admin.js",
+    "api:auth-test": "node scripts/auth-api-test.js",
+    "api:admin-feedback-test": "node scripts/admin-feedback-api-test.js",
+    "api:dashboard-test": "node scripts/dashboard-api-test.js",
+    "api:csv-test": "node scripts/csv-export-api-test.js",
+    "api:e2e-test": "node scripts/end-to-end-flow-test.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "dotenv": "^16.6.1",
+    "exceljs": "^4.4.0",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
     "mysql2": "^3.14.3"
   }
 }

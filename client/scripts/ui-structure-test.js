@@ -1,0 +1,140 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { createExportQuery, createFeedbackQuery, formatFeedbackDate } from '../src/services/adminApi.js';
+const app = await readFile(new URL('../src/pages/PublicFeedbackPage.jsx', import.meta.url), 'utf8');
+const widget = await readFile(new URL('../src/components/TurnstileWidget.jsx', import.meta.url), 'utf8');
+const adminApp = await readFile(new URL('../src/components/admin/AdminApp.jsx', import.meta.url), 'utf8');
+const adminDashboard = await readFile(new URL('../src/components/admin/AdminDashboard.jsx', import.meta.url), 'utf8');
+const confirmDeleteDialog = await readFile(new URL('../src/components/admin/ConfirmDeleteDialog.jsx', import.meta.url), 'utf8');
+const adminApi = await readFile(new URL('../src/services/adminApi.js', import.meta.url), 'utf8');
+const feedbackApi = await readFile(new URL('../src/services/feedbackApi.js', import.meta.url), 'utf8');
+const indexHtml = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
+const adminCss = await readFile(new URL('../src/components/admin/admin.css', import.meta.url), 'utf8');
+const securityHeaders = await readFile(new URL('../../server/src/middleware/securityHeaders.js', import.meta.url), 'utf8');
+const readme = await readFile(new URL('../../README.md', import.meta.url), 'utf8');
+
+assert.match(app, /<main\b/u);
+assert.match(app, /<h1 id="page-title"/u);
+assert.match(app, /<form onSubmit=\{handleSubmit\} noValidate/u);
+for (const id of ['name', 'email', 'feedbackType', 'message']) {
+  assert.match(app, new RegExp(`htmlFor="${id}"`, 'u'));
+}
+assert.match(app, /RATING_OPTIONS\.map/u);
+assert.match(app, /type="radio"/u);
+assert.match(app, /aria-required="true"/u);
+assert.doesNotMatch(app, /process-card|A few thoughtful details/u);
+assert.doesNotMatch(app, /Tell us about it/u);
+assert.match(app, /className="feedback-preview" aria-labelledby="preview-title"/u);
+assert.match(app, /className="preview-type">\{form\.feedbackType/u);
+assert.match(app, /className="preview-face"><FaceIcon rating=\{form\.rating\}/u);
+assert.match(app, /className="preview-stars"[\s\S]*?RATING_OPTIONS\.map/u);
+assert.match(app, /className=\{`preview-message[\s\S]*?form\.message\.trim\(\) \? form\.message : 'Your message will appear here as you write\.'/u);
+assert.match(widget, /role="group"\s+aria-labelledby="captcha-label"/u);
+assert.match(indexHtml, /fonts\.googleapis\.com\/css2\?family=Poppins:wght@400;500;600;700/u);
+assert.match(app, /Penthara Technologies/u);
+assert.match(adminApp, /PENTHARA TECHNOLOGIES/u);
+assert.match(adminDashboard, /Penthara Technologies/u);
+assert.doesNotMatch(app, /Use a prompt|usePrompt|getSuggestedPrompt/u);
+assert.match(app, /onFocus=\{\(\) => \{/u);
+assert.match(app, /setSuggestionsOpen\(true\)/u);
+assert.match(app, /aria-autocomplete="list"/u);
+assert.match(app, /role="listbox"/u);
+assert.match(app, /role="option"/u);
+assert.match(app, /onClick=\{\(\) => chooseSuggestion\(suggestion\)\}/u);
+assert.ok(app.indexOf('className="suggestion-panel"') < app.indexOf('<textarea'), 'suggestion list appears above the message textarea');
+assert.match(app, /value=\{form\.message\}[\s\S]*?onChange=\{updateField\}/u);
+assert.match(app, /function chooseSuggestion\(suggestion\)\s*\{\s*setForm\(\(current\) => \(\{ \.\.\.current, message: suggestion \}\)\)/u);
+assert.match(app, /function handleSubmit\(event\)\s*\{[\s\S]*?setSuggestionsOpen\(false\)/u);
+assert.match(app, /document\.addEventListener\('pointerdown', closeOnOutsidePointer\)/u);
+assert.match(app, /onPointerDown=\{\(event\) => event\.preventDefault\(\)\}/u);
+assert.match(app, /setSuggestionsOpen\(false\)/u);
+assert.match(app, /type="submit"/u);
+assert.match(app, /className="header-actions"[\s\S]*?className="admin-signin-link" href="\/admin"/u);
+assert.doesNotMatch(app, /Administrator sign in/u);
+assert.match(app, /<p className="form-kicker" id="form-title">FEEDBACK FORM<\/p>/u);
+assert.doesNotMatch(app, /2\s*MIN/u);
+assert.ok(/<div className="verification-submit-row">[\s\S]*?className="captcha-section"[\s\S]*?<TurnstileWidget[\s\S]*?className="submit-button" type="submit"/u.test(app), 'CAPTCHA and submit control share one form row');
+assert.ok(!/className="submit-row"/.test(app), 'the separate submit row has been removed');
+assert.match(app, /submitFeedback\(\{/u);
+assert.match(feedbackApi, /fetch\('\/api\/feedback'/u);
+assert.match(feedbackApi, /result\.success !== true/u);
+assert.match(app, /setSuccessOpen\(true\)/u);
+assert.match(app, /submissionLockRef\.current \|\| isSubmitting \|\| successOpen/u);
+assert.match(app, /<dialog[\s\S]*?aria-labelledby="success-title"[\s\S]*?aria-describedby="success-message"[\s\S]*?onClose=\{handleSuccessClose\}/u);
+assert.match(app, /function handleSuccessClose\(\)\s*\{[\s\S]*?setForm\(EMPTY_FORM\)/u);
+assert.match(app, /await submitFeedback\(\{[\s\S]*?setFieldErrors\(\{\}\);[\s\S]*?setSuccessOpen\(true\)/u);
+assert.match(app, /successDialogRef\.current\.showModal\(\)/u);
+assert.match(app, /className="success-mark-check"/u);
+console.log('PASS: form exposes suggestions above the textarea, preserves accessible autocomplete, and gates modal/reset on confirmed success');
+
+assert.match(adminApp, /\/api\/auth\/me/u);
+assert.match(adminApp, /\/api\/auth\/login/u);
+assert.match(adminDashboard, /\/api\/admin\/dashboard\/stats/u);
+assert.match(adminDashboard, /\/api\/admin\/dashboard\/charts/u);
+assert.match(adminDashboard, /\/api\/admin\/feedback\?/u);
+assert.match(adminDashboard, /method: 'DELETE'/u);
+assert.match(confirmDeleteDialog, /role="alertdialog"|<dialog/u);
+assert.match(adminApi, /credentials: 'same-origin'/u);
+assert.doesNotMatch(adminApp + adminDashboard, /localStorage|sessionStorage/u);
+console.log('PASS: admin UI uses session/API routes, confirms deletion, and does not store authentication tokens in web storage');
+
+const query = new URLSearchParams(createFeedbackQuery({
+  filters: { keyword: 'Ada & Co', startDate: '2025-01-01', endDate: '', feedbackType: '', rating: '5', sort: 'oldest' },
+  page: 2,
+  limit: 20,
+}));
+assert.equal(query.get('keyword'), 'Ada & Co');
+assert.equal(query.get('startDate'), '2025-01-01');
+assert.equal(query.get('rating'), '5');
+assert.equal(query.get('page'), '2');
+assert.equal(query.get('limit'), '20');
+assert.equal(query.get('sort'), 'oldest');
+assert.equal(query.has('endDate'), false);
+const exportQuery = new URLSearchParams(createExportQuery({ keyword: 'Ada & Co', startDate: '2025-01-01', endDate: '', feedbackType: '', rating: '5', sort: 'oldest' }));
+assert.equal(exportQuery.get('keyword'), 'Ada & Co');
+assert.equal(exportQuery.get('rating'), '5');
+assert.equal(exportQuery.get('sort'), 'oldest');
+assert.equal(exportQuery.has('page'), false);
+assert.equal(exportQuery.has('limit'), false);
+assert.match(formatFeedbackDate('2025-01-01T00:00:00.000Z'), /UTC$/u);
+console.log('PASS: admin query serialization preserves filters/paging and displays timestamps explicitly in UTC');
+
+assert.match(css, /@media\s*\(max-width:\s*900px\)/u);
+assert.match(css, /@media\s*\(max-width:\s*560px\)/u);
+assert.match(css, /\.suggestion-list\s*\{[^}]*max-height:\s*164px/u);
+assert.match(css, /@media\s*\(max-width:\s*560px\)\s*\{[\s\S]*?\.suggestion-list\s*\{\s*max-height:\s*138px/u);
+assert.match(css, /\.suggestion-option-active/u);
+assert.match(css, /prefers-reduced-motion:\s*reduce/u);
+assert.match(css, /\.admin-signin-link\s*\{[^}]*align-items:\s*center/u);
+assert.match(css, /\.site-header\s*\{\s*height:\s*66px/u);
+assert.ok(/@media\s*\(max-width:\s*560px\)\s*\{[\s\S]*?\.form-card\s*\{\s*order:\s*1\s*;\s*\}[\s\S]*?\.intro-column\s*\{\s*order:\s*2\s*;/u.test(css), 'mobile-only CSS places the form before supporting content');
+assert.match(css, /\.success-mark-check\s*\{[^}]*animation:\s*success-check-draw/u);
+assert.match(css, /\.success-dialog::backdrop/u);
+assert.ok(/\.verification-submit-row\s*\{[^}]*display:\s*flex;\s*align-items:\s*center/u.test(css), 'CAPTCHA and button align in a balanced desktop flex row');
+assert.match(css, /\.verification-submit-row \.submit-button\s*\{[^}]*min-height:\s*66px/u);
+assert.ok(/@media\s*\(max-width:\s*1200px\)\s*\{[\s\S]*?\.verification-submit-row\s*\{\s*flex-direction:\s*column;\s*align-items:\s*stretch/u.test(css), 'CAPTCHA and submit control stack when the effective viewport is narrow');
+assert.match(css, /\.captcha-panel \[data-sitekey\], \.captcha-panel iframe \{ max-width: 100%; \}/u);
+assert.match(css, /\.page-shell\s*\{\s*display:\s*flex;\s*flex-direction:\s*column;[^}]*height:\s*100svh;[^}]*overflow:\s*hidden/u);
+assert.match(css, /\.main-layout\s*\{\s*margin-block:\s*auto;\s*padding-block:\s*clamp\(14px,\s*2vh,\s*20px\)/u);
+assert.doesNotMatch(css, /\.page-shell\s*\{[^}]*transform:\s*scale/u);
+assert.ok(/@media\s*\(min-width:\s*1201px\)\s*\{\s*\.site-footer\s*\{\s*display:\s*none;\s*\}/u.test(css), 'footer is hidden on desktop widths');
+assert.ok(/@media\s*\(min-width:\s*561px\)\s*\{[\s\S]*?\.page-shell\s*\{\s*zoom:\s*\.9;\s*height:\s*111\.111svh/u.test(css), 'public page is zoomed out on non-mobile widths');
+assert.match(readme, /At desktop widths \(1,201 CSS pixels and above\), the\s+footer is hidden/u);
+assert.match(css, /:focus-visible/u);
+assert.match(adminCss, /@media\s*\(max-width:\s*680px\)/u);
+assert.match(adminCss, /@media\s*\(max-width:\s*420px\)/u);
+assert.match(adminCss, /:focus-visible/u);
+assert.match(adminCss, /prefers-reduced-motion:\s*reduce/u);
+console.log('PASS: header alignment, mobile form-first order, modal/check animation, keyboard focus, and reduced-motion styling exist');
+
+for (const token of ['--brand-purple: #5426A8', '--brand-magenta: #C52B91', '--brand-background: #F7F5FA', '--brand-text: #21172D', '--brand-muted: #777184', "--font-ui: 'Poppins'"]) {
+  assert.ok(css.includes(token), `shared visual token exists: ${token}`);
+}
+assert.match(css, /font-size:\s*clamp\(44px, 4\.1vw, 54px\)/u);
+assert.match(adminCss, /\.stat-value\s*\{[^}]*font-size:\s*30px/u);
+assert.match(adminCss, /\.admin-field label\s*\{[^}]*font-size:\s*13px/u);
+assert.match(securityHeaders, /style-src 'self' https:\/\/fonts\.googleapis\.com/u);
+assert.match(securityHeaders, /style-src-attr 'unsafe-inline'/u);
+assert.match(securityHeaders, /font-src 'self' https:\/\/fonts\.gstatic\.com/u);
+console.log('PASS: Penthara palette/Poppins tokens, brand labels, larger public/admin type, and font CSP sources are configured');
