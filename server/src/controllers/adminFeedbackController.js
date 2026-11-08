@@ -4,7 +4,7 @@ import {
   parseFeedbackId,
 } from '../services/adminFeedbackService.js';
 import { serializeFeedbackCsv } from '../utils/csv.js';
-import { serializeFeedbackXlsx } from '../utils/xlsx.js';
+import { writeFeedbackXlsx } from '../utils/xlsx.js';
 
 export async function listFeedback(request, response, next) {
   try {
@@ -45,7 +45,8 @@ export async function exportFeedback(request, response, next) {
         'Cache-Control': 'no-store',
         'X-Content-Type-Options': 'nosniff',
       });
-      return response.status(200).send(await serializeFeedbackXlsx(rows));
+      await writeFeedbackXlsx(rows, response);
+      return;
     }
 
     response.set({

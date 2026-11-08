@@ -9,12 +9,6 @@
   --brand-purple-soft: #F1ECF8;
   --brand-focus: rgba(84, 38, 168, .2);
   --font-ui: 'Poppins', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --ink: var(--brand-text);
-  --muted: var(--brand-muted);
-  --line: var(--brand-border);
-  --blue: var(--brand-purple);
-  --blue-dark: #421B8A;
-  --mint: var(--brand-purple-soft);
   font-family: var(--font-ui);
   color: var(--brand-text);
   background: var(--brand-background);
@@ -42,7 +36,7 @@ button:disabled { cursor: wait; }
 .page-shell { min-height: 100vh; }
 .site-header, .main-layout, .site-footer { width: min(1160px, calc(100% - 64px)); margin-inline: auto; }
 .site-header { height: 86px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(207, 217, 230, .72); }
-.brand { display: inline-flex; align-items: center; gap: 11px; color: var(--ink); font-family: Manrope, sans-serif; font-size: 15px; font-weight: 800; letter-spacing: -.04em; text-decoration: none; }
+.brand { display: inline-flex; align-items: center; gap: 11px; color: var(--brand-text); font-family: Manrope, sans-serif; font-size: 15px; font-weight: 800; letter-spacing: -.04em; text-decoration: none; }
 .brand-mark { width: 29px; height: 29px; display: block; border-radius: 4px; object-fit: cover; }
 .header-note { display: inline-flex; align-items: center; gap: 9px; color: #607185; font-size: 12px; font-weight: 600; letter-spacing: .01em; }
 .header-dot { width: 7px; height: 7px; border-radius: 50%; background: #3cb887; box-shadow: 0 0 0 4px rgba(60, 184, 135, .12); }
@@ -247,7 +241,6 @@ h2 { color: var(--brand-text); font-size: 30px; font-weight: 600; letter-spacing
 .character-count { color: var(--brand-muted); font-size: 12px; }
 .captcha-section { margin-top: 6px; }
 .submit-row { border-color: var(--brand-border); }
-.submit-note { color: var(--brand-muted); font-size: 12px; }
 .submit-button { min-height: 46px; border-radius: 7px; background: var(--brand-purple); box-shadow: 0 4px 12px rgba(84, 38, 168, .18); font-size: 15px; font-weight: 600; }
 .submit-button:hover:not(:disabled) { background: #421B8A; box-shadow: 0 6px 15px rgba(84, 38, 168, .22); }
 .submit-button:focus-visible { outline-color: var(--brand-focus); }

@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { FEEDBACK_TYPES, RATING_OPTIONS } from '../../utils/feedbackForm.js';
+import FeedbackCard from './FeedbackCard.jsx';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog.jsx';
 import {
   adminApi, createFeedbackQuery, downloadFeedbackCsv, downloadFeedbackXlsx, formatFeedbackDate, AdminApiError,
 } from '../../services/adminApi.js';
@@ -97,76 +99,6 @@ function VolumeChart({ items = [], loading }) {
         </>
       )}
     </section>
-  );
-}
-
-function RatingLabel({ rating }) {
-  return RATING_OPTIONS.find((option) => option.value === rating)?.label || `Rating ${rating}`;
-}
-
-function FeedbackCard({ item, onDelete }) {
-  const ratingText = RATING_OPTIONS.find((option) => option.value === item.rating)?.label || `Rating ${item.rating}`;
-  return (
-    <article className="feedback-card" aria-labelledby={`feedback-${item.id}`}>
-      <div className="feedback-card-top">
-        <div className="feedback-author">
-          <span className="avatar-initial" aria-hidden="true">{item.name.trim().charAt(0).toUpperCase() || '?'}</span>
-          <div><h3 id={`feedback-${item.id}`}>{item.name}</h3><a href={`mailto:${item.email}`}>{item.email}</a></div>
-        </div>
-        <time dateTime={item.createdAt}>{formatFeedbackDate(item.createdAt)}</time>
-      </div>
-      <div className="feedback-meta">
-        <span className="type-pill">{item.feedbackType}</span>
-        <span className="rating-pill" aria-label={`Rating ${item.rating} out of 5, ${ratingText}`}>
-          <span aria-hidden="true">★</span> {item.rating}/5 · <RatingLabel rating={item.rating} />
-        </span>
-      </div>
-      <p className="feedback-message">{item.message.length > 320 ? `${item.message.slice(0, 320)}…` : item.message}</p>
-      <div className="feedback-card-actions">
-        <button className="delete-button" type="button" onClick={() => onDelete(item)} aria-label={`Delete feedback from ${item.name}`}>
-          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4.5 6h11m-9.5 0 .6 10h7.8L15 6m-7-2h4l.7 2H7.3L8 4Zm1.5 5v4m2-4v4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          Delete
-        </button>
-      </div>
-    </article>
-  );
-}
-
-function DeleteDialog({ item, busy, error, onCancel, onConfirm }) {
-  const dialogRef = useRef(null);
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (item && dialog && !dialog.open) dialog.showModal();
-    if (!item && dialog?.open) dialog.close();
-  }, [item]);
-
-  return (
-    <dialog
-      ref={dialogRef}
-      className="delete-dialog"
-      aria-labelledby="delete-dialog-title"
-      aria-describedby="delete-dialog-description"
-      onCancel={(event) => { event.preventDefault(); if (!busy) onCancel(); }}
-    >
-      {item && (
-        <div className="dialog-content">
-          <span className="dialog-warning-icon" aria-hidden="true">!</span>
-          <p className="admin-eyebrow">PERMANENT ACTION</p>
-          <h2 id="delete-dialog-title">Delete this feedback?</h2>
-          <p id="delete-dialog-description" className="dialog-description">
-            This will permanently delete the feedback from <strong>{item.name}</strong> ({item.email}).
-            This action cannot be undone.
-          </p>
-          {error && <p className="admin-alert" role="alert">{error}</p>}
-          <div className="dialog-actions">
-            <button className="admin-secondary-button" type="button" autoFocus disabled={busy} onClick={onCancel}>Cancel</button>
-            <button className="danger-button" type="button" disabled={busy} onClick={onConfirm}>
-              {busy ? 'Deleting…' : 'Delete feedback'}
-            </button>
-          </div>
-        </div>
-      )}
-    </dialog>
   );
 }
 
@@ -429,7 +361,7 @@ export default function AdminDashboard({ admin, onSessionExpired }) {
         <footer className="admin-footer"><span>Penthara Technologies · Feedback Portal</span><span>Dashboard dates and chart ranges use UTC.</span></footer>
       </main>
 
-      <DeleteDialog item={deleteTarget} busy={deleteBusy} error={deleteError} onCancel={() => setDeleteTarget(null)} onConfirm={deleteFeedback} />
+      <ConfirmDeleteDialog item={deleteTarget} busy={deleteBusy} error={deleteError} onCancel={() => setDeleteTarget(null)} onConfirm={deleteFeedback} />
     </div>
   );
 }

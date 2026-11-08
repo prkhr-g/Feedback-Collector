@@ -19,15 +19,9 @@ function protectCellValue(value) {
     : text;
 }
 
-/** Create a styled XLSX workbook containing the supplied feedback rows. */
-export async function serializeFeedbackXlsx(rows) {
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Feedback Collector';
-  workbook.created = new Date();
-
-  const worksheet = workbook.addWorksheet('Feedback');
+function configureWorksheet(worksheet, includeViews = true) {
   worksheet.columns = XLSX_COLUMNS;
-  worksheet.views = [{ state: 'frozen', ySplit: 1 }];
+  if (includeViews) worksheet.views = [{ state: 'frozen', ySplit: 1 }];
   worksheet.autoFilter = { from: 'A1', to: 'H1' };
 
   const header = worksheet.getRow(1);
@@ -37,22 +31,53 @@ export async function serializeFeedbackXlsx(rows) {
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '5426A8' } };
     cell.alignment = { vertical: 'middle', horizontal: 'left' };
   });
+}
 
-  for (const row of rows) {
-    const worksheetRow = worksheet.addRow({
-      id: row.id,
-      name: protectCellValue(row.name),
-      email: protectCellValue(row.email),
-      feedbackType: protectCellValue(row.feedbackType),
-      rating: row.rating,
-      ratingLabel: RATING_LABELS[Number(row.rating)] ?? '',
-      message: protectCellValue(row.message),
-      createdAt: row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt),
-    });
-    worksheetRow.getCell('createdAt').numFmt = 'yyyy-mm-dd hh:mm:ss "UTC"';
-    worksheetRow.getCell('message').alignment = { wrapText: true, vertical: 'top' };
-    worksheetRow.getCell('createdAt').alignment = { vertical: 'top' };
-  }
+function addFeedbackRow(worksheet, row) {
+  const worksheetRow = worksheet.addRow({
+    id: row.id,
+    name: protectCellValue(row.name),
+    email: protectCellValue(row.email),
+    feedbackType: protectCellValue(row.feedbackType),
+    rating: row.rating,
+    ratingLabel: RATING_LABELS[Number(row.rating)] ?? '',
+    message: protectCellValue(row.message),
+    createdAt: row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt),
+  });
+  worksheetRow.getCell('createdAt').numFmt = 'yyyy-mm-dd hh:mm:ss "UTC"';
+  worksheetRow.getCell('message').alignment = { wrapText: true, vertical: 'top' };
+  worksheetRow.getCell('createdAt').alignment = { vertical: 'top' };
+  return worksheetRow;
+}
+
+/** Create a styled XLSX workbook containing the supplied feedback rows. */
+export async function serializeFeedbackXlsx(rows) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Feedback Collector';
+  workbook.created = new Date();
+
+  const worksheet = workbook.addWorksheet('Feedback');
+  configureWorksheet(worksheet);
+  rows.forEach((row) => addFeedbackRow(worksheet, row));
 
   return workbook.xlsx.writeBuffer();
+}
+
+/** Stream a styled XLSX workbook directly to an HTTP response. */
+export async function writeFeedbackXlsx(rows, stream) {
+  const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+    stream,
+    useStyles: true,
+    useSharedStrings: true,
+  });
+  workbook.creator = 'Feedback Collector';
+  workbook.created = new Date();
+
+  const worksheet = workbook.addWorksheet('Feedback', {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+  configureWorksheet(worksheet, false);
+  rows.forEach((row) => addFeedbackRow(worksheet, row).commit());
+  worksheet.commit();
+  await workbook.commit();
 }
