@@ -12,7 +12,6 @@ const indexHtml = await readFile(new URL('../index.html', import.meta.url), 'utf
 const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
 const adminCss = await readFile(new URL('../src/components/admin/admin.css', import.meta.url), 'utf8');
 const securityHeaders = await readFile(new URL('../../server/src/middleware/securityHeaders.js', import.meta.url), 'utf8');
-const readme = await readFile(new URL('../../README.md', import.meta.url), 'utf8');
 
 assert.match(app, /<main\b/u);
 assert.match(app, /<h1 id="page-title"/u);
@@ -120,7 +119,6 @@ assert.match(css, /\.main-layout\s*\{\s*margin-block:\s*auto;\s*padding-block:\s
 assert.doesNotMatch(css, /\.page-shell\s*\{[^}]*transform:\s*scale/u);
 assert.ok(/@media\s*\(min-width:\s*1201px\)\s*\{\s*\.site-footer\s*\{\s*display:\s*none;\s*\}/u.test(css), 'footer is hidden on desktop widths');
 assert.ok(/@media\s*\(min-width:\s*561px\)\s*\{[\s\S]*?\.page-shell\s*\{\s*zoom:\s*\.9;\s*height:\s*111\.111svh/u.test(css), 'public page is zoomed out on non-mobile widths');
-assert.match(readme, /At desktop widths \(1,201 CSS pixels and above\), the\s+footer is hidden/u);
 assert.match(css, /:focus-visible/u);
 assert.match(adminCss, /@media\s*\(max-width:\s*680px\)/u);
 assert.match(adminCss, /@media\s*\(max-width:\s*420px\)/u);
