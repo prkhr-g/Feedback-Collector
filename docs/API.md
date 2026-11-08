@@ -102,13 +102,15 @@ Invalid filters return `400`.
 
 ### `GET /api/admin/feedback/export`
 
-Downloads every matching record as `feedback-YYYYMMDD.csv`. It accepts the
+Downloads every matching record, independent of list pagination. It accepts the
 same keyword, UTC date, feedback type, rating, and sort filters as the list
-route; `page` and `limit` are ignored. Exports are capped at 10,000 rows and
-return `422` when the filter matches more, so narrow the filters and retry.
+route; `page` and `limit` are ignored. Use `format=csv` (the default) or
+`format=xlsx`. Files use descriptive `feedback-export-YYYYMMDD` filenames.
+
 CSV includes both the numeric rating and its label. It uses UTF-8 with a BOM,
 quoted fields, CRLF rows, and formula neutralization for spreadsheet-leading
-formula characters. Timestamps are rendered in UTC.
+formula characters. XLSX files contain styled headers, suitable column widths,
+a frozen header row, and UTC-formatted submission dates.
 Invalid filters return `400`.
 
 ### `GET /api/admin/feedback/:id`

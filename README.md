@@ -225,10 +225,11 @@ bounded rating and feedback-type distributions. The protected React admin
 dashboard is available at `http://localhost:5173/admin` after initializing an
 admin account.
 
-Download all filtered feedback as a CSV from the admin dashboard. The
-protected export ignores list pagination, returns at most 10,000 rows, includes
-numeric ratings and labels, writes UTC timestamps, and neutralizes spreadsheet
-formula cells. Verify the export
+Download all filtered feedback as CSV or XLSX from the admin dashboard. The
+protected export ignores list pagination, includes numeric ratings and labels,
+writes UTC timestamps, and neutralizes spreadsheet formula cells in CSV values.
+The XLSX workbook uses styled headers, readable column widths, and a frozen
+header row. Verify the export
 route and tricky CSV values against PostgreSQL with:
 
 ```powershell

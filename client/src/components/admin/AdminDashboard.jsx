@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FEEDBACK_TYPES, RATING_OPTIONS } from '../../utils/feedbackForm.js';
 import {
-  adminApi, createFeedbackQuery, downloadFeedbackCsv, formatFeedbackDate, AdminApiError,
+  adminApi, createFeedbackQuery, downloadFeedbackCsv, downloadFeedbackXlsx, formatFeedbackDate, AdminApiError,
 } from '../../services/adminApi.js';
 import './admin.css';
 
@@ -190,6 +190,7 @@ export default function AdminDashboard({ admin, onSessionExpired }) {
   const [deleteError, setDeleteError] = useState('');
   const [logoutBusy, setLogoutBusy] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
   const loadOverview = useCallback(async (signal) => {
     setOverviewLoading(true);
@@ -292,12 +293,15 @@ export default function AdminDashboard({ admin, onSessionExpired }) {
     }
   }
 
-  async function exportCsv() {
+  async function exportFeedback(format) {
     if (exportBusy) return;
     setExportBusy(true);
+    setExportMenuOpen(false);
     setNotice('');
     try {
-      const filename = await downloadFeedbackCsv(appliedFilters);
+      const filename = format === 'xlsx'
+        ? await downloadFeedbackXlsx(appliedFilters)
+        : await downloadFeedbackCsv(appliedFilters);
       setNotice(`Download started: ${filename}`);
     } catch (error) {
       if (error instanceof AdminApiError && error.status === 401) onSessionExpired();
@@ -358,9 +362,26 @@ export default function AdminDashboard({ admin, onSessionExpired }) {
             <div><p className="admin-eyebrow">INBOX</p><h2 id="feedback-list-title">Feedback submissions</h2><p>Search, filter, and review incoming feedback.</p></div>
             <div className="section-tools">
               {pagination && <span className="record-count">{formatCount(pagination.totalRecords)} {pagination.totalRecords === 1 ? 'record' : 'records'}</span>}
-              <button className="export-button" type="button" onClick={exportCsv} disabled={exportBusy} title="Download all matching records, not only this page">
-                {exportBusy ? 'Preparing…' : 'Export CSV'}
-              </button>
+              <div className="export-menu">
+                <button
+                  className="export-button"
+                  type="button"
+                  onClick={() => setExportMenuOpen((open) => !open)}
+                  disabled={exportBusy}
+                  aria-haspopup="menu"
+                  aria-expanded={exportMenuOpen}
+                  title="Download all matching records, not only this page"
+                >
+                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 13v3a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  {exportBusy ? 'Preparing…' : 'Export'}
+                </button>
+                {exportMenuOpen && (
+                  <div className="export-menu-list" role="menu">
+                    <button type="button" role="menuitem" onClick={() => exportFeedback('xlsx')}>Spreadsheet (.xlsx)</button>
+                    <button type="button" role="menuitem" onClick={() => exportFeedback('csv')}>CSV (.csv)</button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

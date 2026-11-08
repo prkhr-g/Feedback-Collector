@@ -47,11 +47,11 @@ export function createExportQuery(filters) {
   return params.toString();
 }
 
-/** Download a CSV file from the same-origin protected API. */
-export async function downloadFeedbackCsv(filters) {
+/** Download a protected export file from the same-origin API. */
+export async function downloadFeedbackExport(filters, format = 'csv') {
   let response;
   try {
-    response = await fetch(`/api/admin/feedback/export?${createExportQuery(filters)}`, {
+    response = await fetch(`/api/admin/feedback/export?format=${format}&${createExportQuery(filters)}`, {
       credentials: 'same-origin',
     });
   } catch {
@@ -62,8 +62,10 @@ export async function downloadFeedbackCsv(filters) {
     throw new AdminApiError(result.message || 'The export could not be created.', response.status);
   }
 
-  const filename = /filename="(feedback-\d{8}\.csv)"/iu.exec(response.headers.get('Content-Disposition') || '')?.[1]
-    || 'feedback-export.csv';
+  const expectedExtension = format === 'xlsx' ? 'xlsx' : 'csv';
+  const filename = new RegExp(`filename="(feedback-export-\\d{8}\\.${expectedExtension})"`, 'iu')
+    .exec(response.headers.get('Content-Disposition') || '')?.[1]
+    || `feedback-export.${expectedExtension}`;
   const objectUrl = URL.createObjectURL(await response.blob());
   const link = document.createElement('a');
   link.href = objectUrl;
@@ -74,6 +76,9 @@ export async function downloadFeedbackCsv(filters) {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
   return filename;
 }
+
+export const downloadFeedbackCsv = (filters) => downloadFeedbackExport(filters, 'csv');
+export const downloadFeedbackXlsx = (filters) => downloadFeedbackExport(filters, 'xlsx');
 
 export function formatFeedbackDate(value) {
   return new Intl.DateTimeFormat(undefined, {

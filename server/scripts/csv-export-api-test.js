@@ -2,17 +2,18 @@ import 'dotenv/config';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import http from 'node:http';
+import ExcelJS from 'exceljs';
 
 process.env.JWT_SECRET = 'phase-nine-test-only-secret-value-0123456789';
 process.env.JWT_EXPIRES_IN = '1d';
 process.env.CLIENT_ORIGIN = 'http://localhost:5173';
 
-const [{ default: app }, database, auth, csv, exportService] = await Promise.all([
+const [{ default: app }, database, auth, csv, xlsx] = await Promise.all([
   import('../src/app.js'),
   import('../src/config/database.js'),
   import('../src/services/authService.js'),
   import('../src/utils/csv.js'),
-  import('../src/services/adminFeedbackService.js'),
+  import('../src/utils/xlsx.js'),
 ]);
 const pool = database.getDatabasePool();
 const suffix = randomUUID().replaceAll('-', '');
@@ -55,11 +56,15 @@ function request(port, path, { method = 'GET', body, cookie, origin = 'http://lo
     const req = http.request({ host: '127.0.0.1', port, path, method, headers }, (res) => {
       const chunks = [];
       res.on('data', (chunk) => chunks.push(chunk));
-      res.on('end', () => resolve({
+      res.on('end', () => {
+        const buffer = Buffer.concat(chunks);
+        resolve({
         status: res.statusCode,
         headers: res.headers,
-        text: Buffer.concat(chunks).toString('utf8'),
-      }));
+        text: buffer.toString('utf8'),
+        buffer,
+        });
+      });
     });
     req.on('error', reject);
     req.end(body === undefined ? undefined : JSON.stringify(body));
@@ -138,7 +143,7 @@ try {
   response = await request(port, `/api/admin/feedback/export?${query}`, { cookie });
   assert.equal(response.status, 200);
   assert.match(response.headers['content-type'], /^text\/csv; charset=utf-8/u);
-  assert.match(response.headers['content-disposition'], /^attachment; filename="feedback-\d{8}\.csv"$/u);
+   assert.match(response.headers['content-disposition'], /^attachment; filename="feedback-export-\d{8}\.csv"$/u);
   assert.equal(response.headers['cache-control'], 'no-store');
   assert.equal(response.headers['x-content-type-options'], 'nosniff');
   assert.ok(response.text.startsWith('\uFEFF'));
@@ -156,18 +161,33 @@ try {
   assert.equal(dangerousEmail[2], `'${records[1].email}`);
   assert.equal(dangerousEmail[6], `'-2+3, ordinary text`);
   assert.ok(dangerousName[7].endsWith('UTC'));
-  console.log('PASS: protected filtered export returns every matching row independent of page and limit');
-  console.log('PASS: CSV headers, attachment metadata, UTC timestamps, quoting, embedded commas/quotes/newlines, and formula neutralization');
+   console.log('PASS: protected filtered export returns every matching row independent of page and limit');
+   console.log('PASS: CSV headers, attachment metadata, UTC timestamps, quoting, embedded commas/quotes/newlines, and formula neutralization');
+
+   response = await request(port, `/api/admin/feedback/export?${new URLSearchParams({ ...Object.fromEntries(query), format: 'xlsx' })}`, { cookie });
+   assert.equal(response.status, 200);
+   assert.match(response.headers['content-type'], /^application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/u);
+   assert.match(response.headers['content-disposition'], /^attachment; filename="feedback-export-\d{8}\.xlsx"$/u);
+   const workbook = new ExcelJS.Workbook();
+   await workbook.xlsx.load(response.buffer);
+   const worksheet = workbook.getWorksheet('Feedback');
+   assert.deepEqual(worksheet.getRow(1).values.slice(1), ['ID', 'Name', 'Email', 'Feedback Type', 'Rating', 'Rating Label', 'Message', 'Submitted At (UTC)']);
+   assert.equal(worksheet.views[0].state, 'frozen');
+   assert.equal(worksheet.views[0].ySplit, 1);
+   assert.equal(worksheet.rowCount, records.length + 1);
+   assert.equal(worksheet.getCell('H2').numFmt, 'yyyy-mm-dd hh:mm:ss "UTC"');
+   console.log('PASS: XLSX export returns all filtered rows with styled frozen headers and UTC date formatting');
 
   response = await request(port, `/api/admin/feedback/export?${new URLSearchParams({ rating: '6' })}`, { cookie });
   assert.equal(response.status, 400);
   assert.match(JSON.parse(response.text).message, /Invalid export filters/u);
   console.log('PASS: export validates filter allowlists and returns safe errors');
 
-  assert.equal(exportService.MAX_CSV_EXPORT_ROWS, 10000);
-  const standalone = csv.serializeFeedbackCsv([{ id: 1, name: '\t=1+1', email: 'x@example.invalid', feedbackType: 'Other', rating: 1, message: 'line, "quote"', createdAt: new Date('2025-01-02T03:04:05.000Z') }]);
-  assert.match(standalone, /"'\t=1\+1"/u);
-  console.log('PASS: export row limit is fixed at 10,000 and leading tabs are neutralized');
+   const standalone = csv.serializeFeedbackCsv([{ id: 1, name: '\t=1+1', email: 'x@example.invalid', feedbackType: 'Other', rating: 1, message: 'line, "quote"', createdAt: new Date('2025-01-02T03:04:05.000Z') }]);
+   assert.match(standalone, /"'\t=1\+1"/u);
+   const standaloneXlsx = await xlsx.serializeFeedbackXlsx([{ id: 1, name: '', email: 'x@example.invalid', feedbackType: 'Other', rating: 1, message: 'line, "quote"', createdAt: new Date('2025-01-02T03:04:05.000Z') }]);
+   assert.ok(Buffer.isBuffer(standaloneXlsx) || standaloneXlsx instanceof ArrayBuffer);
+   console.log('PASS: CSV formula protection and XLSX special/empty value handling remain safe');
 } finally {
   if (insertedIds.length) {
     await pool.query('DELETE FROM feedback WHERE id = ANY($1::bigint[])', [insertedIds]);

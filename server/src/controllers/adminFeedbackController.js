@@ -1,9 +1,10 @@
 import { nextUtcDate, parseAdminFeedbackQuery } from '../utils/adminFeedbackQuery.js';
 import {
   deleteAdminFeedback, exportAdminFeedback, getAdminFeedbackById, listAdminFeedback,
-  MAX_CSV_EXPORT_ROWS, parseFeedbackId,
+  parseFeedbackId,
 } from '../services/adminFeedbackService.js';
 import { serializeFeedbackCsv } from '../utils/csv.js';
+import { serializeFeedbackXlsx } from '../utils/xlsx.js';
 
 export async function listFeedback(request, response, next) {
   try {
@@ -22,25 +23,34 @@ export async function listFeedback(request, response, next) {
 export async function exportFeedback(request, response, next) {
   try {
     const query = { ...request.query };
+    const format = query.format || 'csv';
+    if (!['csv', 'xlsx'].includes(format)) {
+      return response.status(400).json({ success: false, message: 'Export format must be csv or xlsx.' });
+    }
     delete query.page;
     delete query.limit;
+    delete query.format;
     const parsed = parseAdminFeedbackQuery(query);
     if (parsed.errors) {
       return response.status(400).json({ success: false, message: 'Invalid export filters.', errors: parsed.errors });
     }
     const filters = { ...parsed.value, endDateExclusive: nextUtcDate(parsed.value.endDate) };
-    const { rows, truncated } = await exportAdminFeedback(filters);
-    if (truncated) {
-      return response.status(422).json({
-        success: false,
-        message: `Exports are limited to ${MAX_CSV_EXPORT_ROWS.toLocaleString()} records. Narrow the filters and try again.`,
-      });
-    }
+    const { rows } = await exportAdminFeedback(filters);
 
     const fileDate = new Date().toISOString().slice(0, 10).replaceAll('-', '');
+    if (format === 'xlsx') {
+      response.set({
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition': `attachment; filename="feedback-export-${fileDate}.xlsx"`,
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff',
+      });
+      return response.status(200).send(await serializeFeedbackXlsx(rows));
+    }
+
     response.set({
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="feedback-${fileDate}.csv"`,
+      'Content-Disposition': `attachment; filename="feedback-export-${fileDate}.csv"`,
       'Cache-Control': 'no-store',
       'X-Content-Type-Options': 'nosniff',
     });

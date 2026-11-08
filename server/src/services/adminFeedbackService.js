@@ -1,7 +1,5 @@
 import { getDatabasePool } from '../config/database.js';
 
-export const MAX_CSV_EXPORT_ROWS = 10000;
-
 function buildWhere(filters) {
   const clauses = [];
   const values = [];
@@ -52,16 +50,16 @@ export async function listAdminFeedback(filters) {
   };
 }
 
-/** Fetch every matching row up to one past the hard export cap. */
+/** Fetch every row matching the validated filters, independent of pagination. */
 export async function exportAdminFeedback(filters) {
   const where = buildWhere(filters);
   const orderBy = filters.sort === 'oldest' ? 'created_at ASC, id ASC' : 'created_at DESC, id DESC';
   const result = await getDatabasePool().query(
     `SELECT id, name, email, feedback_type AS "feedbackType", rating, message, created_at AS "createdAt"
-     FROM feedback ${where.sql} ORDER BY ${orderBy} LIMIT $${where.values.length + 1}`,
-    [...where.values, MAX_CSV_EXPORT_ROWS + 1],
+     FROM feedback ${where.sql} ORDER BY ${orderBy}`,
+    where.values,
   );
-  return { rows: result.rows, truncated: result.rows.length > MAX_CSV_EXPORT_ROWS };
+  return { rows: result.rows };
 }
 
 /** Return one feedback record by validated ID, or null when it does not exist. */
