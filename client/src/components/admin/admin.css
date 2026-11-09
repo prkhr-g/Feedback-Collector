@@ -363,3 +363,12 @@
   .admin-brand small { font-size: 8px; }
   .logout-button { font-size: 12px; }
 }
+
+/* Keep the mobile stat-card layout intact: the theme block above resets
+   .stat-card padding later in the file, so re-assert the reserved icon gutter
+   here to prevent the absolute icon from overlapping the label. */
+@media (max-width: 420px) {
+  .stat-card { min-height: 100px; padding-left: 56px; }
+  .stat-icon { position: absolute; top: 16px; left: 14px; }
+  .stat-detail { position: absolute; top: 17px; right: 12px; }
+}
