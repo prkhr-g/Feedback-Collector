@@ -76,7 +76,10 @@ assert.match(adminDashboard, /method: 'DELETE'/u);
 assert.match(confirmDeleteDialog, /role="alertdialog"|<dialog/u);
 assert.match(adminApi, /credentials: 'same-origin'/u);
 assert.doesNotMatch(adminApp + adminDashboard, /localStorage|sessionStorage/u);
-console.log('PASS: admin UI uses session/API routes, confirms deletion, and does not store authentication tokens in web storage');
+assert.match(adminDashboard, /className="admin-mobile-public-link" href="\/">← Back to feedback form/u);
+assert.match(adminCss, /\.admin-mobile-public-link\s*\{\s*display:\s*none;/u);
+assert.ok(/@media\s*\(max-width:\s*680px\)\s*\{[\s\S]*?\.admin-mobile-public-link\s*\{\s*display:\s*flex;/u.test(adminCss), 'mobile dashboard provides a link back to the feedback form');
+console.log('PASS: admin UI uses session/API routes, confirms deletion, keeps mobile return path, and does not store authentication tokens in web storage');
 
 const query = new URLSearchParams(createFeedbackQuery({
   filters: { keyword: 'Ada & Co', startDate: '2025-01-01', endDate: '', feedbackType: '', rating: '5', sort: 'oldest' },
@@ -117,12 +120,13 @@ assert.ok(/@media\s*\(max-width:\s*1200px\)\s*\{[\s\S]*?\.verification-submit-ro
 assert.match(css, /\.captcha-panel \[data-sitekey\], \.captcha-panel iframe \{ max-width: 100%; \}/u);
 assert.match(css, /\.page-shell\s*\{\s*display:\s*flex;\s*flex-direction:\s*column;\s*min-height:\s*100vh;\s*min-height:\s*100svh;/u);
 assert.doesNotMatch(css, /\.page-shell\s*\{[^}]*overflow:\s*hidden/u);
-assert.match(css, /\.main-layout\s*\{\s*margin-block:\s*auto;\s*padding-block:\s*clamp\(14px,\s*2vh,\s*20px\)/u);
+assert.match(css, /\.main-layout\s*\{\s*flex:\s*1 1 auto;\s*align-content:\s*center;\s*padding-block:\s*clamp\(14px,\s*2vh,\s*20px\)/u);
 assert.doesNotMatch(css, /\.page-shell\s*\{[^}]*transform:\s*scale/u);
-assert.ok(/@media\s*\(min-width:\s*1201px\)\s*\{\s*\.site-footer\s*\{\s*display:\s*none;\s*\}/u.test(css), 'footer is hidden on desktop widths');
+assert.doesNotMatch(css, /\.site-footer\s*\{\s*display:\s*none/u);
+assert.ok(/@media\s*\(min-width:\s*1201px\)\s*\{[\s\S]*?\.page-shell\s*\{\s*zoom:\s*0\.9;\s*min-height:\s*111\.111svh/u.test(css), 'desktop page fills the viewport after scaling and keeps the footer visible');
 assert.ok(/@media\s*\(min-width:\s*1201px\)\s*\{[\s\S]*?\.page-shell\s*\{\s*zoom:\s*0\.9;/u.test(css), 'public page is scaled down on desktop widths');
-assert.ok(/@media\s*\(min-width:\s*1201px\)\s*and\s*\(max-height:\s*860px\)\s*\{[\s\S]*?\.page-shell\s*\{\s*zoom:\s*0\.84;/u.test(css), 'short desktop windows scale down further');
-assert.doesNotMatch(css, /height:\s*111\.111svh/u);
+assert.ok(/@media\s*\(min-width:\s*1201px\)\s*and\s*\(max-height:\s*860px\)\s*\{[\s\S]*?\.page-shell\s*\{\s*zoom:\s*0\.84;\s*min-height:\s*119\.047619svh;/u.test(css), 'short desktop windows scale down further and fill the viewport');
+assert.doesNotMatch(css, /(?<!-)height:\s*111\.111svh/u);
 assert.match(css, /:focus-visible/u);
 assert.match(adminCss, /@media\s*\(max-width:\s*680px\)/u);
 assert.match(adminCss, /@media\s*\(max-width:\s*420px\)/u);

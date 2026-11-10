@@ -321,7 +321,7 @@ h2 { color: var(--brand-text); font-size: 30px; font-weight: 600; letter-spacing
   min-height: 100svh;
 }
 .site-header, .site-footer { flex-shrink: 0; }
-.main-layout { margin-block: auto; padding-block: clamp(14px, 2vh, 20px); }
+.main-layout { flex: 1 1 auto; align-content: center; padding-block: clamp(14px, 2vh, 20px); }
 .form-card { padding: 23px 30px 18px; }
 .form-card-heading { align-items: center; margin-bottom: 12px; }
 .form-kicker { margin-bottom: 0; }
@@ -347,17 +347,13 @@ h2 { color: var(--brand-text); font-size: 30px; font-weight: 600; letter-spacing
   }
 }
 
-@media (min-width: 1201px) {
-  .site-footer { display: none; }
-}
-
 /* Desktop: scale the page down slightly so a full-screen window shows
    the complete form without a vertical scrollbar. The document still
    scrolls normally when the viewport is shorter than the content. */
 @media (min-width: 1201px) {
-  .page-shell { zoom: 0.9; }
+  .page-shell { zoom: 0.9; min-height: 111.111svh; }
   .site-header { height: 60px; }
-  .main-layout { padding-block: 12px 18px; gap: clamp(32px, 4.5vw, 60px); }
+  .main-layout { padding-block: 16px; gap: clamp(32px, 4.5vw, 60px); }
   .form-card { padding: 21px 28px 17px; }
   .form-card-heading { margin-bottom: 10px; }
   .form-card .field-group { margin-bottom: 8px; }
@@ -374,8 +370,8 @@ h2 { color: var(--brand-text); font-size: 30px; font-weight: 600; letter-spacing
 
 /* Short desktop windows: scale a little more so the form still fits. */
 @media (min-width: 1201px) and (max-height: 860px) {
-  .page-shell { zoom: 0.84; }
-  .main-layout { padding-block: 10px 14px; }
+  .page-shell { zoom: 0.84; min-height: 119.047619svh; }
+  .main-layout { padding-block: 12px; }
   .form-card { padding: 18px 26px 15px; }
   .form-card .field-group { margin-bottom: 7px; }
   .form-card .field-group textarea { min-height: 86px; }
