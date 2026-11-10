@@ -265,6 +265,7 @@ export default function AdminDashboard({ admin, onSessionExpired }) {
       </header>
 
       <main className="admin-main">
+        <a className="admin-mobile-public-link" href="/">← Back to feedback form</a>
         <section className="dashboard-heading">
           <div><p className="admin-eyebrow">OVERVIEW</p><h1>Feedback dashboard</h1><p>Understand what people are saying and where to focus next.</p></div>
           <button className="admin-secondary-button refresh-button" type="button" onClick={() => { setOverviewVersion((version) => version + 1); setListVersion((version) => version + 1); }}>

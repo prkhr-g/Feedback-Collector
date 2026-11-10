@@ -76,7 +76,10 @@ assert.match(adminDashboard, /method: 'DELETE'/u);
 assert.match(confirmDeleteDialog, /role="alertdialog"|<dialog/u);
 assert.match(adminApi, /credentials: 'same-origin'/u);
 assert.doesNotMatch(adminApp + adminDashboard, /localStorage|sessionStorage/u);
-console.log('PASS: admin UI uses session/API routes, confirms deletion, and does not store authentication tokens in web storage');
+assert.match(adminDashboard, /className="admin-mobile-public-link" href="\/">← Back to feedback form/u);
+assert.match(adminCss, /\.admin-mobile-public-link\s*\{\s*display:\s*none;/u);
+assert.ok(/@media\s*\(max-width:\s*680px\)\s*\{[\s\S]*?\.admin-mobile-public-link\s*\{\s*display:\s*flex;/u.test(adminCss), 'mobile dashboard provides a link back to the feedback form');
+console.log('PASS: admin UI uses session/API routes, confirms deletion, keeps mobile return path, and does not store authentication tokens in web storage');
 
 const query = new URLSearchParams(createFeedbackQuery({
   filters: { keyword: 'Ada & Co', startDate: '2025-01-01', endDate: '', feedbackType: '', rating: '5', sort: 'oldest' },
@@ -107,7 +110,7 @@ assert.match(css, /\.suggestion-option-active/u);
 assert.match(css, /prefers-reduced-motion:\s*reduce/u);
 assert.match(css, /\.admin-signin-link\s*\{[^}]*align-items:\s*center/u);
 assert.match(css, /\.site-header\s*\{\s*height:\s*66px/u);
-assert.ok(/@media\s*\(max-width:\s*560px\)\s*\{[\s\S]*?\.form-card\s*\{\s*order:\s*1\s*;\s*\}[\s\S]*?\.intro-column\s*\{\s*order:\s*2\s*;/u.test(css), 'mobile-only CSS places the form before supporting content');
+assert.ok(/@media\s*\(max-width:\s*560px\)\s*\{[\s\S]*?\.intro-column\s*\{\s*display:\s*contents;[\s\S]*?\.intro-heading\s*\{\s*order:\s*1;[\s\S]*?\.form-card\s*\{\s*order:\s*2;[\s\S]*?\.feedback-preview\s*\{\s*order:\s*3;/u.test(css), 'mobile-only CSS places the intro first, the form second, and the preview third');
 assert.match(css, /\.success-mark-check\s*\{[^}]*animation:\s*success-check-draw/u);
 assert.match(css, /\.success-dialog::backdrop/u);
 assert.ok(/\.verification-submit-row\s*\{[^}]*display:\s*flex;\s*align-items:\s*center/u.test(css), 'CAPTCHA and button align in a balanced desktop flex row');
@@ -117,18 +120,19 @@ assert.ok(/@media\s*\(max-width:\s*1200px\)\s*\{[\s\S]*?\.verification-submit-ro
 assert.match(css, /\.captcha-panel \[data-sitekey\], \.captcha-panel iframe \{ max-width: 100%; \}/u);
 assert.match(css, /\.page-shell\s*\{\s*display:\s*flex;\s*flex-direction:\s*column;\s*min-height:\s*100vh;\s*min-height:\s*100svh;/u);
 assert.doesNotMatch(css, /\.page-shell\s*\{[^}]*overflow:\s*hidden/u);
-assert.match(css, /\.main-layout\s*\{\s*margin-block:\s*auto;\s*padding-block:\s*clamp\(14px,\s*2vh,\s*20px\)/u);
+assert.match(css, /\.main-layout\s*\{\s*flex:\s*1 1 auto;\s*align-content:\s*center;\s*padding-block:\s*clamp\(14px,\s*2vh,\s*20px\)/u);
 assert.doesNotMatch(css, /\.page-shell\s*\{[^}]*transform:\s*scale/u);
-assert.ok(/@media\s*\(min-width:\s*1201px\)\s*\{\s*\.site-footer\s*\{\s*display:\s*none;\s*\}/u.test(css), 'footer is hidden on desktop widths');
+assert.doesNotMatch(css, /\.site-footer\s*\{\s*display:\s*none/u);
+assert.ok(/@media\s*\(min-width:\s*1201px\)\s*\{[\s\S]*?\.page-shell\s*\{\s*zoom:\s*0\.9;\s*min-height:\s*111\.111svh/u.test(css), 'desktop page fills the viewport after scaling and keeps the footer visible');
 assert.ok(/@media\s*\(min-width:\s*1201px\)\s*\{[\s\S]*?\.page-shell\s*\{\s*zoom:\s*0\.9;/u.test(css), 'public page is scaled down on desktop widths');
-assert.ok(/@media\s*\(min-width:\s*1201px\)\s*and\s*\(max-height:\s*860px\)\s*\{[\s\S]*?\.page-shell\s*\{\s*zoom:\s*0\.84;/u.test(css), 'short desktop windows scale down further');
-assert.doesNotMatch(css, /height:\s*111\.111svh/u);
+assert.ok(/@media\s*\(min-width:\s*1201px\)\s*and\s*\(max-height:\s*860px\)\s*\{[\s\S]*?\.page-shell\s*\{\s*zoom:\s*0\.84;\s*min-height:\s*119\.047619svh;/u.test(css), 'short desktop windows scale down further and fill the viewport');
+assert.doesNotMatch(css, /(?<!-)height:\s*111\.111svh/u);
 assert.match(css, /:focus-visible/u);
 assert.match(adminCss, /@media\s*\(max-width:\s*680px\)/u);
 assert.match(adminCss, /@media\s*\(max-width:\s*420px\)/u);
 assert.match(adminCss, /:focus-visible/u);
 assert.match(adminCss, /prefers-reduced-motion:\s*reduce/u);
-console.log('PASS: header alignment, mobile form-first order, modal/check animation, keyboard focus, and reduced-motion styling exist');
+console.log('PASS: header alignment, mobile intro-first order, modal/check animation, keyboard focus, and reduced-motion styling exist');
 
 for (const token of ['--brand-purple: #5426A8', '--brand-magenta: #C52B91', '--brand-background: #F7F5FA', '--brand-text: #21172D', '--brand-muted: #777184', "--font-ui: 'Poppins'"]) {
   assert.ok(css.includes(token), `shared visual token exists: ${token}`);
