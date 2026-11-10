@@ -64,9 +64,14 @@ export default function TurnstileWidget({ siteKey, onToken, error }) {
           sitekey: siteKey,
           callback: (token) => onToken(token),
           'expired-callback': () => onToken(''),
-          'error-callback': () => {
+          'error-callback': (errorCode) => {
             onToken('');
-            setLoadError('Verification could not be completed. Check your connection and try again.');
+            console.error(`[Turnstile] verification failed${errorCode ? ` (error ${errorCode})` : ''}`);
+            setLoadError(
+              String(errorCode) === '110200'
+                ? 'Verification is not configured for this domain. Please contact the site owner.'
+                : 'Verification could not be completed. Please try again.',
+            );
             return true;
           },
         });
