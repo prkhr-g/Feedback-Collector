@@ -183,9 +183,50 @@ npm run db:migrate:mysql --workspace server -- --apply
 
 ## Deployment
 
-Render is the planned hosting platform for the Express service, with Neon as the PostgreSQL provider. The application is not currently claimed to be live or publicly deployed.
+The application is deployed on Render as a single Web Service that serves both the compiled React frontend and the Express API.
 
-Before deployment, configure production environment variables, HTTPS, live Turnstile keys, a unique JWT secret, the correct public `CLIENT_ORIGIN`, Neon URLs, and the correct `TRUST_PROXY_HOPS` value.
+- **Live app:** `https://feedback-collector-2nfo.onrender.com`
+- **Admin dashboard:** `https://feedback-collector-2nfo.onrender.com/admin`
+- **API health check:** `https://feedback-collector-2nfo.onrender.com/api/health`
+
+PostgreSQL is hosted on Neon. Express serves the Vite production build from `client/dist` and the API from the same origin, so no separate static frontend service is required.
+
+### Render service settings
+
+| Setting | Value |
+|---|---|
+| Root directory | `.` |
+| Build command | `npm ci --include=dev && npm run build` |
+| Start command | `npm start` |
+| Health check path | `/api/health` |
+| Runtime | Node.js 22.12 or newer |
+
+### Production environment variables
+
+Configure these in the Render service before deploying:
+
+- `DATABASE_URL`
+- `DATABASE_URL_UNPOOLED`
+- `JWT_SECRET`
+- `JWT_EXPIRES_IN`
+- `TURNSTILE_SECRET_KEY`
+- `VITE_TURNSTILE_SITE_KEY`
+- `CLIENT_ORIGIN` — must exactly match `https://feedback-collector-2nfo.onrender.com`
+- `TRUST_PROXY_HOPS=1`
+- `ADMIN_EMAIL` and `ADMIN_PASSWORD` only when initializing the first administrator
+
+Do not set `NODE_ENV` manually. `VITE_TURNSTILE_SITE_KEY` is embedded during the frontend build, so changing it requires a rebuild and redeploy. The site key and secret must belong to the same Cloudflare Turnstile widget, and the deployed Render hostname must be authorized in that widget.
+
+### Why the first page load can take some time
+
+The live site can be slow on the first visit because Render may spin down an idle web service, especially on the free instance type. The next request starts the service again through a cold start, which commonly takes around 30–60 seconds and can occasionally take longer. After the service is awake, subsequent page loads are fast. A service that was just deployed or rebuilt may also take a few minutes to finish its initial build and release. This is expected Render behavior rather than an application error.
+
+### Post-deployment checks
+
+1. Open `/api/health` and confirm it returns a successful response.
+2. Open the public form and submit a test feedback entry with the live Turnstile widget.
+3. Open `/admin` and confirm the administrator can sign in.
+4. If admin login returns `403 Request origin is not allowed`, verify that `CLIENT_ORIGIN` matches the deployed origin exactly and redeploy.
 
 ## Demo access
 
