@@ -296,8 +296,12 @@ h2 { color: var(--brand-text); font-size: 30px; font-weight: 600; letter-spacing
   .header-note { display: none; }
   .admin-signin-link { min-height: 38px; padding-inline: 11px; font-size: 12px; }
   .main-layout { gap: 25px; padding-top: 14px; }
-  .form-card { order: 1; }
-  .intro-column { order: 2; }
+  .intro-column { display: contents; }
+  .intro-heading { order: 1; min-width: 0; }
+  .form-card { order: 2; }
+  .feedback-preview { order: 3; }
+  .privacy-note { order: 4; }
+  .intro-heading .intro-copy { margin-bottom: 0; }
   .success-dialog { padding: 28px 21px 23px; }
   .success-dialog h2 { font-size: 21px; }
 }

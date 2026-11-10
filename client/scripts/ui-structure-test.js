@@ -107,7 +107,7 @@ assert.match(css, /\.suggestion-option-active/u);
 assert.match(css, /prefers-reduced-motion:\s*reduce/u);
 assert.match(css, /\.admin-signin-link\s*\{[^}]*align-items:\s*center/u);
 assert.match(css, /\.site-header\s*\{\s*height:\s*66px/u);
-assert.ok(/@media\s*\(max-width:\s*560px\)\s*\{[\s\S]*?\.form-card\s*\{\s*order:\s*1\s*;\s*\}[\s\S]*?\.intro-column\s*\{\s*order:\s*2\s*;/u.test(css), 'mobile-only CSS places the form before supporting content');
+assert.ok(/@media\s*\(max-width:\s*560px\)\s*\{[\s\S]*?\.intro-column\s*\{\s*display:\s*contents;[\s\S]*?\.intro-heading\s*\{\s*order:\s*1;[\s\S]*?\.form-card\s*\{\s*order:\s*2;[\s\S]*?\.feedback-preview\s*\{\s*order:\s*3;/u.test(css), 'mobile-only CSS places the intro first, the form second, and the preview third');
 assert.match(css, /\.success-mark-check\s*\{[^}]*animation:\s*success-check-draw/u);
 assert.match(css, /\.success-dialog::backdrop/u);
 assert.ok(/\.verification-submit-row\s*\{[^}]*display:\s*flex;\s*align-items:\s*center/u.test(css), 'CAPTCHA and button align in a balanced desktop flex row');
@@ -128,7 +128,7 @@ assert.match(adminCss, /@media\s*\(max-width:\s*680px\)/u);
 assert.match(adminCss, /@media\s*\(max-width:\s*420px\)/u);
 assert.match(adminCss, /:focus-visible/u);
 assert.match(adminCss, /prefers-reduced-motion:\s*reduce/u);
-console.log('PASS: header alignment, mobile form-first order, modal/check animation, keyboard focus, and reduced-motion styling exist');
+console.log('PASS: header alignment, mobile intro-first order, modal/check animation, keyboard focus, and reduced-motion styling exist');
 
 for (const token of ['--brand-purple: #5426A8', '--brand-magenta: #C52B91', '--brand-background: #F7F5FA', '--brand-text: #21172D', '--brand-muted: #777184', "--font-ui: 'Poppins'"]) {
   assert.ok(css.includes(token), `shared visual token exists: ${token}`);

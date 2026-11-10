@@ -218,12 +218,14 @@ function PublicFeedbackPage() {
 
       <main id="top" className="main-layout">
         <section className="intro-column" aria-labelledby="page-title">
-          <p className="eyebrow"><span className="eyebrow-line" /> YOUR VOICE, IN THE LOOP</p>
-          <h1 id="page-title">Help us make the next visit <span>better.</span></h1>
-          <p className="intro-copy">
-            Tell us about your experience with Penthara Technologies. Share what
-            worked, what could improve, or what you would like to see next.
-          </p>
+          <div className="intro-heading">
+            <p className="eyebrow"><span className="eyebrow-line" /> YOUR VOICE, IN THE LOOP</p>
+            <h1 id="page-title">Help us make the next visit <span>better.</span></h1>
+            <p className="intro-copy">
+              Tell us about your experience with Penthara Technologies. Share what
+              worked, what could improve, or what you would like to see next.
+            </p>
+          </div>
 
           <section className="feedback-preview" aria-labelledby="preview-title">
             <div className="preview-header">
